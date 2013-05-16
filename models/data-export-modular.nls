@@ -231,7 +231,7 @@ to data-export:init-inquiry-summary
 end
 
 to data-export:update-inquiry-summary [ new-inquiry-summary ]
-  set data-export:inquiry-summary new-inquiry-summary
+  set data-export:inquiry-summary ( word new-inquiry-summary )
   if not empty? data-export:run-series [
     ; then replace last run-series in data-export:run-series list with updated inquiry-summary data
     let run-series data-export:create-run-series data-export:last-run-series-data
