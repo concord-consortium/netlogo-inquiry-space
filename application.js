@@ -6,7 +6,7 @@ DEVELOPMENT = true;
 var ROOT = "",
     ROOT_REGEX = new RegExp(ROOT + "/.*$"),
     ACTUAL_ROOT = document.location.pathname.replace(ROOT_REGEX, ''),
-    dataGamesProxyPrefix = 'concord-github-io/';
+    dataGamesProxyPrefix = 'DataGames/Games/concord-github-io/netlogo-inquiry-space';
 
 (function() {
 
