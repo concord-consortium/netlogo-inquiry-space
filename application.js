@@ -259,7 +259,7 @@ var ROOT = "",
         "dimensions": interactive.model.viewOptions.dimensions,
         "url": dataGamesProxyPrefix + "embeddable.html#" +  interactiveUrl
       }];
-      dgUrl = "http://is.kcptech.com/dg?moreGames=" + JSON.stringify(dgPayload);
+      dgUrl = "http://is-test.kcptech.com/dg?moreGames=" + JSON.stringify(dgPayload);
       return encodeURI(dgUrl);
     });
 
