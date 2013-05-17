@@ -6,6 +6,7 @@ DEVELOPMENT = true;
 var ROOT = "",
     ROOT_REGEX = new RegExp(ROOT + "/.*$"),
     ACTUAL_ROOT = document.location.pathname.replace(ROOT_REGEX, ''),
+    kcpHost = "http://is-test.kcptech.com",
     dataGamesProxyPrefix = 'DataGames/Games/concord-github-io/netlogo-inquiry-space/';
 
 (function() {
@@ -259,7 +260,7 @@ var ROOT = "",
         "dimensions": interactive.model.viewOptions.dimensions,
         "url": dataGamesProxyPrefix + "embeddable.html#" +  interactiveUrl
       }];
-      dgUrl = "http://is-test.kcptech.com/dg?moreGames=" + JSON.stringify(dgPayload);
+      dgUrl = kcpHost + "/dg?moreGames=" + JSON.stringify(dgPayload);
       return encodeURI(dgUrl);
     });
 
