@@ -6,7 +6,8 @@ DEVELOPMENT = true;
 var ROOT = "",
     ROOT_REGEX = new RegExp(ROOT + "/.*$"),
     ACTUAL_ROOT = document.location.pathname.replace(ROOT_REGEX, ''),
-    kcpHost = "http://is-test.kcptech.com",
+    kcpHost = "http://is.kcptech.com",
+    kcpStagingHost = "http://is-test.kcptech.com",
     dataGamesProxyPrefix = 'DataGames/Games/concord-github-io/netlogo-inquiry-space/';
 
 (function() {
@@ -261,6 +262,17 @@ var ROOT = "",
         "url": dataGamesProxyPrefix + "embeddable.html#" +  interactiveUrl
       }];
       dgUrl = kcpHost + "/dg?moreGames=" + JSON.stringify(dgPayload);
+      return encodeURI(dgUrl);
+    });
+
+    // construct link to DataGames (staging) embeddable version of Interactive
+    $("#datagames-staging-link").attr("href", function(i, href) {
+      dgPayload = [{
+        "name": $(selectInteractive).find("option:selected").text(),
+        "dimensions": interactive.model.viewOptions.dimensions,
+        "url": dataGamesProxyPrefix + "embeddable.html#" +  interactiveUrl
+      }];
+      dgUrl = kcpStagingHost + "/dg?moreGames=" + JSON.stringify(dgPayload);
       return encodeURI(dgUrl);
     });
 
