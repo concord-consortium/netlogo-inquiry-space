@@ -120,7 +120,10 @@ to update-displays
     set height precision ([y-val] of vehicle w) 2
     place-point time dist-from-zero c 
     let s precision ([speed] of vehicle w) 2
-    set data-series lput (list time dist-from-zero height s ) data-series ]
+    let point (list time dist-from-zero height s )
+    set data-series lput point data-series
+    ; save current time-series point for later JSON data:export features
+    update-data-series point ]
 end
 
 to-report uv ; in vehicle context, reports the screen coordinates [u v]
@@ -922,9 +925,9 @@ end
 
 to capture-final-state
   set old-running? false
+  ; saves this experiment in an exportable form as a run
   ask vehicle first v-who [
     update-run-series (precision x-val 2) (precision y-val 2)]
-  update-data-series  ; makes the list of time-series data available 
 end
 
 ;to save-for-output ; this program updates saved-time-series, a list of lists containing [t, x, y, speed] for every .25 sec
@@ -1029,8 +1032,8 @@ end
 ;;;    pass in any needed values as arguments if they are not global variables
 ;;;
 
-to update-data-series 
-  data-export:update-data-series data-series
+to update-data-series [ time-series-value ]
+  data-export:update-data-series time-series-value
 end
 
 ;;;
@@ -1046,17 +1049,14 @@ end
 ;;;
 ;;; To test in NetLogo:
 ;;;
+;;; After running the model run print-data-export in the observer panel:
 ;;;
-;;; After running the model call the method data-export:make-model-data:
-;;; 
-;;;   data-export:make-model-data
-;;;
-;;; This will update the global variable: data-export:model-data
-;;;
-;;; Now print data-export:model-data which contains the JSON data available for export:
-;;;
-;;;   data-export:make-model-data print data-export:model-data
-;;;;
+
+to print-data-export
+  data-export:make-model-data
+  print data-export:model-data
+end
+
 ;;;
 ;;; end of data-export methods
 ;;;
