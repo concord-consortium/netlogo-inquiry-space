@@ -237,6 +237,8 @@ to initialize
   setup-data-export    ;;; used to define the structure of the exported data
   tick
 
+  data-export:log-event "Initialization complete"
+
 end
 
 to-report in-grid? [u v] 
@@ -888,6 +890,7 @@ to start-run
   set running? true
   set blinking? false
   set time 0
+  data-export:log-event "New run started"
 end
 
 to read-cursor-location  ; used if the cursor is in the graphing area
@@ -928,6 +931,7 @@ to capture-final-state
   ; saves this experiment in an exportable form as a run
   ask vehicle first v-who [
     update-run-series (precision x-val 2) (precision y-val 2)]
+  data-export:log-event "Run data available"
 end
 
 ;to save-for-output ; this program updates saved-time-series, a list of lists containing [t, x, y, speed] for every .25 sec
