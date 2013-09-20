@@ -251,8 +251,10 @@ var ROOT = "",
     var val = "";
     for (var i = 0; i < data.size(); i++) {
       val = data.get(i);
-      $exportedLogData.html($exportedLogData.html() + "<br/>" + val);
       Lab.importExport.dgExporter.logAction(val);
+      if ($exportedLogData) {
+        $exportedLogData.html($exportedLogData.html() + "<br/>" + val);
+      }
     }
   }
 
