@@ -171,12 +171,18 @@ globals [
   data-export:run-number
   data-export:data-series-trip
   data-export:inquiry-summary
+  data-export:log-data
+  data-export:exported-log-data
+  data-export:log-data-available?
+  data-export:log-data-ready?
 ]
 
 to data-export:initialize [ setup ]
   set data-export:module-available true
   set data-export:data-ready? false
   set data-export:data-available? false
+  set data-export:log-data-available? false
+  set data-export:log-data-ready? false
 
   data-export:init-run-series
   data-export:init-data-series
@@ -201,6 +207,9 @@ to data-export:initialize [ setup ]
 
   set data-export:times-series-data                        item 5 setup
   set data-export:times-series-keys                        [ "label" "units" "min" "max" ]
+
+  set data-export:log-data []
+  set data-export:exported-log-data ""
 
   set data-export:data-series-labels   map [ first ? ] data-export:times-series-data
   data-export:make-model-data
@@ -303,6 +312,24 @@ to data-export:update-run-series [ run-series-data ]
   data-export:init-data-series
   data-export:init-inquiry-summary
   set data-export:data-available? true   ; but once update-run-series is finished data are available
+end
+
+to data-export:log-event [ event-string ]
+  set data-export:log-data lput event-string data-export:log-data
+  set data-export:log-data-available? true
+end
+
+to data-export:export-log-data
+  let log-data data-export:log-data
+  set data-export:log-data []
+  set data-export:log-data-available? false
+
+  let output "["
+  foreach log-data [ set output (word output "\n  \"" ? "\",") ]
+  set output but-last output
+  set output (word output "\n]")
+  set data-export:exported-log-data output
+  set data-export:log-data-ready? true
 end
 
 to-report data-export:create-run-series [ run-series-data ]
