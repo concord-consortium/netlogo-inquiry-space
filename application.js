@@ -248,7 +248,11 @@ var ROOT = "",
     var data = nlReadGlobal("DATA-EXPORT:EXPORTED-LOG-DATA");
     nlCmdExecute("set data-export:log-data-ready? false");
 
-    $exportedLogData.html($exportedLogData.html() + "<br/>" + data);
+    var val = "";
+    for (var i = 0; i < data.size(); i++) {
+      val = data.get(i);
+      $exportedLogData.html($exportedLogData.html() + "<br/>" + val);
+    }
   }
 
   function logDataAvailableHandler() {
