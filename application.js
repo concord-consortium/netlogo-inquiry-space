@@ -20,6 +20,7 @@ var ROOT = "",
       showData = document.getElementById('show-data'),
       exportedData = document.getElementById('exported-data'),
 
+      $exportedLogData = $('#log-data'),
       $exportedData = $("exported-data"),
       editor,
       controller,
@@ -35,6 +36,7 @@ var ROOT = "",
       nl_obj_program, nl_obj_observer, nl_obj_globals,
       nlGlobals,
       clearDataReady,
+      clearLogReady,
       exportedTimeStamps = {};
 
   if (!document.location.hash) {
@@ -239,6 +241,25 @@ var ROOT = "",
   if (exportData) {
     exportData.onclick = exportDataHandler;
   }
+
+  function logDataReadyCallback() {
+    // get the log data and append it to the div
+    clearInterval(clearLogReady);
+    var data = nlReadGlobal("DATA-EXPORT:EXPORTED-LOG-DATA");
+    nlCmdExecute("set data-export:log-data-ready? false");
+
+    $exportedLogData.html($exportedLogData.html() + "<br/>" + data);
+  }
+
+  function logDataAvailableHandler() {
+    var dataAvailable = nlReadGlobal("DATA-EXPORT:LOG-DATA-AVAILABLE?");
+    if (dataAvailable) {
+      nlCmdExecute("data-export:export-log-data");
+      clearLogReady = window.setInterval(logDataReadyCallback, 50);
+    }
+  }
+
+  window.setInterval(logDataAvailableHandler, 250);
 
   //
   // The following functions are only used when rendering the

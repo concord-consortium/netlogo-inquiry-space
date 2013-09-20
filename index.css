@@ -2166,6 +2166,15 @@
   height: 40em;
   background-color: #eee; }
 
+#logs {
+  position: absolute;
+  top: 5px;
+  left: 850px;
+  width: 700px;
+  height: 470px;
+  overflow: auto;
+}
+
 #applet-container {
   display: inline-block;
   top: 0;
@@ -2187,6 +2196,7 @@
   padding: 0.4em; }
 
 #content {
+  position: relative;
   width: 100%;
   white-space: nowrap; }
 
