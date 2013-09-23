@@ -155,6 +155,7 @@ globals [
   data-export:data-ready?
   data-export:computational-inputs
   data-export:computational-inputs-keys
+  data-export:computational-inputs-labels
   data-export:representational-inputs
   data-export:representational-inputs-keys
   data-export:representational-inputs-categorical-keys
@@ -190,6 +191,7 @@ to data-export:initialize [ setup ]
 
   set data-export:computational-inputs                     item 0 setup
   set data-export:computational-inputs-keys                [ "label" "units" "min" "max" ]
+  set data-export:computational-inputs-labels data-export:calculate-computational-inputs-labels
 
   set data-export:representational-inputs                  item 1 setup
   set data-export:representational-inputs-keys             [ "label" "units" "min" "max" ]
@@ -314,8 +316,28 @@ to data-export:update-run-series [ run-series-data ]
   set data-export:data-available? true   ; but once update-run-series is finished data are available
 end
 
-to data-export:log-event [ event-string ]
-  set data-export:log-data lput event-string data-export:log-data
+to data-export:log-event [ message values-list reason-code reason-text ]
+  ; generates a string in the format of:
+  ; 'User discarded data. Per-run Settings and Data: {"fields":["Gravity (m/s²)","Rod length (cm)","Starting angle (°)","Ball mass (g)","Damping (N⋅s/m)"],"values":[9.8,10,45,250,0],"reasonCode":"other","reasonText":"Here is my reason."}'
+  let output message
+  let json ""
+  if not empty? values-list [
+    let fields (word "\"fields\": " (data-export:json-array data-export:computational-inputs-labels) ",")
+    let values (word "\"values\": " (data-export:json-array values-list) ",")
+    set json (word json fields values)
+  ]
+  if (not empty? reason-code) or (not empty? reason-text) [
+    set json (word json "\"reasonCode\": \"" reason-code "\",")
+    set json (word json "\"reasonText\": \"" reason-text "\",")
+  ]
+
+  if not empty? json [
+    set json (word " Per-run Settings and Data: {" (but-last json) "}")
+  ]
+
+  set output word output json
+
+  set data-export:log-data lput output data-export:log-data
   set data-export:log-data-available? true
 end
 
@@ -326,6 +348,10 @@ to data-export:export-log-data
 
   set data-export:exported-log-data log-data
   set data-export:log-data-ready? true
+end
+
+to-report data-export:calculate-computational-inputs-labels
+  report (map [(word (item 0 ?1) " (" (item 1 ?1) ")")] data-export:computational-inputs)
 end
 
 to-report data-export:create-run-series [ run-series-data ]
