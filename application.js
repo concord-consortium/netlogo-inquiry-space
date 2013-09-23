@@ -16,7 +16,6 @@ var ROOT = "",
       windowLoaded = $.Deferred(),
 
       selectInteractive = document.getElementById('select-interactive'),
-      exportData = document.getElementById('export-data'),
       showData = document.getElementById('show-data'),
       exportedData = document.getElementById('exported-data'),
 
@@ -108,7 +107,7 @@ var ROOT = "",
     }
 
     if (applet.ready) {
-      window.setInterval(buttonStatusCallback, 250);
+      window.setInterval(checkForDataHandler, 250);
     } else {
       applet.checked_more_than_once = window.setTimeout(appletReady, 250);
     }
@@ -116,14 +115,12 @@ var ROOT = "",
     return applet.ready;
   }
 
-  function buttonStatusCallback() {
-    var enable = dgDataReady();
+  function checkForDataHandler() {
+    var ready = dgDataReady();
 
-    if (enable === null || !exportData) {
-      // Do nothing--we'll try again in the next timer interval.
-      return;
+    if (ready) {
+      exportDataHandler();
     }
-    exportData.disabled = !enable;
   }
 
   $(window).load(function() {
@@ -185,7 +182,7 @@ var ROOT = "",
     } catch (e) {
       nlCmdExecute("data-export:make-model-data");
     }
-    clearDataReady = window.setInterval(exportDataReadyCallback, 250);
+    clearDataReady = window.setInterval(exportDataReadyCallback, 50);
   }
 
   function exportDataReadyCallback() {
@@ -236,10 +233,6 @@ var ROOT = "",
         }
       }
     }
-  }
-
-  if (exportData) {
-    exportData.onclick = exportDataHandler;
   }
 
   function logDataReadyCallback() {

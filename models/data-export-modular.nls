@@ -270,6 +270,7 @@ end
 
 to data-export:make-model-data
   set data-export:data-ready? false
+  set data-export:data-available? false
   data-export:make-model-description
   data-export:serialize-run-series
   set data-export:data-ready? false
