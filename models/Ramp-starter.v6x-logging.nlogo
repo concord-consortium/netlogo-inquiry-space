@@ -890,7 +890,7 @@ to start-run
   set running? true
   set blinking? false
   set time 0
-  data-export:log-event "User started new run." [1 2 3] "" ""
+  data-export:log-event "User started new run." ( list start-height mass ramp-friction floor-friction ) "" ""
 end
 
 to read-cursor-location  ; used if the cursor is in the graphing area
@@ -931,7 +931,6 @@ to capture-final-state
   ; saves this experiment in an exportable form as a run
   ask vehicle first v-who [
     update-run-series (precision x-val 2) (precision y-val 2)]
-  data-export:log-event "User run data available." [4 5 6] "foo" "something longer than foo"
 end
 
 ;to save-for-output ; this program updates saved-time-series, a list of lists containing [t, x, y, speed] for every .25 sec
@@ -1026,6 +1025,7 @@ to update-run-series [x y]
   let student-inputs          []
   let run-series-data ( list computational-inputs representational-inputs computational-outputs student-inputs )
   data-export:update-run-series run-series-data
+  data-export:log-event "User run data available." computational-inputs "other" "some other relevant piece of information"
 end
 
 ;;;
