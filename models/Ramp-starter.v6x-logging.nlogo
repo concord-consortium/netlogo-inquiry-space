@@ -104,7 +104,6 @@ to go              ; this is the main forever button
   if running? [
     run-vehicles  ; computes the motion of the vehicles
     every .05 [update-displays]]
-  if not running? and old-running? [capture-final-state]  ; used to save final data for export
   every .1 [
     act-on-changes
     support-mouse ]
@@ -890,6 +889,7 @@ to start-run
   set running? true
   set blinking? false
   set time 0
+  data-export:clear-last-run
   data-export:log-event "User started new run." ( list start-height mass ramp-friction floor-friction ) "" ""
 end
 
@@ -927,10 +927,12 @@ to autoscale
 end
 
 to capture-final-state
-  set old-running? false
-  ; saves this experiment in an exportable form as a run
-  ask vehicle first v-who [
-    update-run-series (precision x-val 2) (precision y-val 2)]
+  if not running? [
+    set old-running? false
+    ; saves this experiment in an exportable form as a run
+    ask vehicle first v-who [
+      update-run-series (precision x-val 2) (precision y-val 2)]
+  ]
 end
 
 ;to save-for-output ; this program updates saved-time-series, a list of lists containing [t, x, y, speed] for every .25 sec
@@ -1143,9 +1145,9 @@ NIL
 
 BUTTON
 20
-246
-199
-279
+245
+106
+278
 Start
 Start-run
 NIL
@@ -1159,10 +1161,10 @@ NIL
 1
 
 BUTTON
-20
-279
-199
-312
+106
+245
+201
+278
 Stop
 set running? false
 NIL
@@ -1262,6 +1264,23 @@ TEXTBOX
 \"Floor Friction\" sets the friction to the right of zero.
 9
 0.0
+1
+
+BUTTON
+20
+278
+201
+311
+Analyze Data
+capture-final-state
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
 1
 
 @#$#@#$#@
@@ -1686,7 +1705,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.0.3
+NetLogo 5.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@

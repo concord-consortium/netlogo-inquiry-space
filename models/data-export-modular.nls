@@ -317,6 +317,11 @@ to data-export:update-run-series [ run-series-data ]
   set data-export:data-available? true   ; but once update-run-series is finished data are available
 end
 
+to data-export:clear-last-run
+  data-export:init-data-series
+  data-export:init-inquiry-summary
+end
+
 to data-export:log-event [ message values-list reason-code reason-text ]
   ; generates a string in the format of:
   ; 'User discarded data. Per-run Settings and Data: {"fields":["Gravity (m/s²)","Rod length (cm)","Starting angle (°)","Ball mass (g)","Damping (N⋅s/m)"],"values":[9.8,10,45,250,0],"reasonCode":"other","reasonText":"Here is my reason."}'
