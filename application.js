@@ -17,6 +17,7 @@ var ROOT = "",
 
       selectInteractive = document.getElementById('select-interactive'),
       showData = document.getElementById('show-data'),
+      exportData = document.getElementById('export-data'),
       exportedData = document.getElementById('exported-data'),
 
       $exportedLogData = $('#log-data'),
@@ -52,6 +53,11 @@ var ROOT = "",
     $.get(interactiveUrl).done(function(results) {
       if (typeof results === 'string') results = JSON.parse(results);
       interactive = results;
+
+      // FIXME Ugly - once all the models don't need the export button, we can remove this
+      if (exportData && /-logging/.test(interactive.model.url)) {
+        $(exportData).hide();
+      }
 
       // Use the presense of selectInteractive as a proxy indicating that the
       // rest of the elements on the non-iframe-embeddable version of the page
@@ -118,8 +124,10 @@ var ROOT = "",
   function checkForDataHandler() {
     var ready = dgDataReady();
 
-    if (ready) {
+    if (ready && $(exportData).is(":hidden")) {
       exportDataHandler();
+    } else {
+      exportData.disabled = !ready;
     }
   }
 
@@ -233,6 +241,10 @@ var ROOT = "",
         }
       }
     }
+  }
+
+  if (exportData && !$(exportData).is(":hidden")) {
+    exportData.onclick = exportDataHandler;
   }
 
   function logDataReadyCallback() {
