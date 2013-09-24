@@ -186,6 +186,7 @@ to initialize
   set dt .00004 ; the time step
   set x-center 1.35 set y-center .5
   set running? false
+  set ready-for-export? false
   set blinking? false
   set old-blinking? false
   set run-number -1
@@ -672,6 +673,7 @@ to setup-new-run
         set speed 0]
       set i i + 1]]
   set running? false ; the simulation is not recording
+  set ready-for-export? false
   set old-running? false  ; used to trap the first cycle (probably redundant)
   set saved-time-series []  ; this contains the data to be exported
   tick
@@ -893,6 +895,11 @@ to start-run
   data-export:log-event "User started new run." ( list start-height mass ramp-friction floor-friction ) "" ""
 end
 
+to stop-run
+  set running? false
+  set ready-for-export? true
+end
+
 to read-cursor-location  ; used if the cursor is in the graphing area
   let u mouse-xcor let v mouse-ycor
   if not in-grid? u v [
@@ -927,8 +934,9 @@ to autoscale
 end
 
 to capture-final-state
-  if not running? [
+  if not starting? and not running? and ready-for-export? [
     set old-running? false
+    set ready-for-export? false
     ; saves this experiment in an exportable form as a run
     ask vehicle first v-who [
       update-run-series (precision x-val 2) (precision y-val 2)]
@@ -1166,7 +1174,7 @@ BUTTON
 201
 278
 Stop
-set running? false
+stop-run
 NIL
 1
 T
