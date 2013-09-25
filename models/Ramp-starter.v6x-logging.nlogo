@@ -675,6 +675,7 @@ to setup-new-run
   set running? false ; the simulation is not recording
   set ready-for-export? false
   set old-running? false  ; used to trap the first cycle (probably redundant)
+  data-export:clear-last-run
   set saved-time-series []  ; this contains the data to be exported
   tick
 end
@@ -891,7 +892,6 @@ to start-run
   set running? true
   set blinking? false
   set time 0
-  data-export:clear-last-run
   data-export:log-event "User started new run." ( list start-height mass ramp-friction floor-friction ) "" ""
 end
 
