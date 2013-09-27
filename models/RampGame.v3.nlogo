@@ -378,7 +378,7 @@ to define-transforms    ; calculates m and b as in u=mx+b for window 1
   set by replace-item 0 by (v-center - y-center * magnification)
 end
 
-to move-ramp
+to move-ramp-old
   if move-ramp-left? [               ; flag set by an object going off to the right
     set x-center x-center - 500 / magnification
     set move-ramp-left? false ]
@@ -392,6 +392,9 @@ to move-ramp
   ask vehicles [
     place-vehicle x-val ; relocate vehicles on ramp
     ]      
+end
+
+to move-ramp
 end
 
 to support-mouse
