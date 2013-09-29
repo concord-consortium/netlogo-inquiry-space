@@ -24,6 +24,7 @@ globals [
   n-wind            ; the number of windows
   starting? 
   running?          ; true when the car is running
+  ready-for-export? 
   old-x-center
   old-y-center
   old-magnification
@@ -54,7 +55,6 @@ globals [
   height dist
   saved-time-series ; a list of lists containing [t, x, y, speed] for every .5 sec
   start-height  ;
-  data-series
   saved-starting-x
   data-saved?
   
@@ -108,7 +108,8 @@ globals [
   max-level   ; the number of levels in the game
   marker-1              ; the who of the left-hand marker of the target range
   marker-2              ; the who of the right-hand marker
-  waiting-for-setup?   ; used to force the user to press setup before running. 
+  waiting-for-setup?    ; used to allow the user to press setup. 
+  waiting-for-start?    ; used to allow the user to press start.
   final-position        ; the final position of the car at the end of a run
 
 ]
@@ -136,6 +137,10 @@ to startup  ; structured this way in order to have a start page
   reset-ticks
   draw-first-page
   set starting? true
+  set waiting-for-start? false
+  set running? false
+  set ready-for-export? false
+  set waiting-for-setup? false
 end
 
 to go              ; this is the main forever button
@@ -147,7 +152,6 @@ to go              ; this is the main forever button
   if running? [
     run-vehicles  ; computes the motion of the vehicles
     every .02 [update-displays]]
-  if not running? and old-running? [capture-final-state]  ; used to save final data for export
   every .1 [   ; do the following every tenth second
     act-on-changes
     support-mouse]   ; maintains the action step, sets parameters, handles the screen, shows score, etc 
@@ -163,8 +167,11 @@ to update-displays
     set height precision ([y-val] of vehicle w) 2
     place-point time dist-from-zero c 
     let s precision ([speed] of vehicle w) 2
-    set data-series lput (list time dist-from-zero height s ) data-series ]
+    let point (list time dist-from-zero height s )
+;    update-data-series point 
+]
 end
+
 
 to-report uv-of-vehicle ; in vehicle context, reports the screen coordinates [u v] of that vehicle
   ; also sets the heading of the vehicle and its y-val
@@ -194,13 +201,13 @@ end
 
 to act-on-changes
   if magnification != old-magnification [ 
-    move-ramp 
+    draw-ramp 
     set old-magnification magnification ]
   if y-axis != old-y-axis [
     update-y-axis 
     draw-grid
     set old-y-axis y-axis ]
-  if move-ramp-left? or move-ramp-right? [move-ramp]
+  if move-ramp-left? or move-ramp-right? [draw-ramp]
   
   if friction != old-friction [          ; if the user tries to change the friction...
     ifelse friction-locked? or running?      ;   and the friction slider is supposed to be locked or the model is running
@@ -225,6 +232,8 @@ to draw-first-page
 end
 
 to initialize
+  set ready-for-export? false
+  set waiting-for-start? true
   set magnification 100
   set n-wind 3    ; three windows
   set old-focus 0 ; zero stands for no focus
@@ -236,6 +245,7 @@ to initialize
   set dt .00004 ; the time step
   set x-center 1.35 set y-center .5
   set running? false
+  set old-running? false
   set blinking? false
   set old-blinking? false
   set run-number -1
@@ -269,7 +279,7 @@ to initialize
 
   set move-ramp-left? false
   set move-ramp-right? false
-  move-ramp ; draws ramp
+  draw-ramp ; draws ramp
   set selected-ramp-index false ; this is the index of the pair in ramp that the mouse has selected and drags
   ; define six possible vehicles
   set vehicle-colors (list cyan green 44 blue magenta orange)
@@ -290,7 +300,6 @@ to initialize
       set thickness 6 set color red]]
   set data-saved? true
   set output-width  48      ; characters in the output box, used with pretty-print
-  setup-new-run
   set total-score 0
   set score-last-run 0
   set messages-shown [0 0 0 0 0 0 ] ; initializes the number of help messages already shown to the student, by level
@@ -305,6 +314,7 @@ to initialize
   clear-output
   pretty-print "Make the car stop in the middle of the red zone. You can adjust the starting position of the car."
   setup-data-export    ;;; used to define the structure of the exported data
+  setup-new-run
   tick
 
 end
@@ -378,7 +388,7 @@ to define-transforms    ; calculates m and b as in u=mx+b for window 1
   set by replace-item 0 by (v-center - y-center * magnification)
 end
 
-to move-ramp-old
+to draw-ramp
   if move-ramp-left? [               ; flag set by an object going off to the right
     set x-center x-center - 500 / magnification
     set move-ramp-left? false ]
@@ -392,9 +402,6 @@ to move-ramp-old
   ask vehicles [
     place-vehicle x-val ; relocate vehicles on ramp
     ]      
-end
-
-to move-ramp
 end
 
 to support-mouse
@@ -471,12 +478,12 @@ to handle-mouse-click
       set i i + 1]] 
   if click = 2 [stop]           ; if click = 2 a vehicle has been selected, and its who is selected vehicle
   
-  set u-click mouse-xcor  ; save the u,v coordinates of the mouse
-  set v-click mouse-ycor 
-  if in-wind? u-click v-click [
-    set click 3 ; must be a background click
-    set old-x-center x-center ; find the x,y coordinates of this point
-    set old-y-center y-center]
+;  set u-click mouse-xcor  ; save the u,v coordinates of the mouse
+;  set v-click mouse-ycor 
+;  if in-wind? u-click v-click [
+;    set click 3 ; must be a background click
+;    set old-x-center x-center ; find the x,y coordinates of this point
+;    set old-y-center y-center]
 end
 
 to handle-mouse-unclick
@@ -509,7 +516,7 @@ to handle-mouse-drag
       if abs(y) < snap [set y 0]          ; snap to zero
       let p list x y  ; p is the [x,y] location of the mouse
       set ramp replace-item i ramp p ; replace item i of ramp with p, where i is selected-ramp-index
-      move-ramp ]]        ; now redraw the ramp
+      draw-ramp ]]        ; now redraw the ramp
   if click = 2 [
     ask vehicle selected-vehicle [
       place-vehicle ((mouse-xcor - bxx) / mxx)]  ; place the vehicle on the track at the mouse x-coordinate
@@ -518,7 +525,7 @@ to handle-mouse-drag
   if click = 3 [       ; drag the x-center but not the y-center 
     set x-center old-x-center - (mouse-xcor - u-click) / mxx
 ;    set y-center old-y-center - (mouse-ycor - v-click) / myy
-    move-ramp ]        ; uses the current x-center y-center and magnification to draw the ramp and vehiclee
+    draw-ramp ]        ; uses the current x-center y-center and magnification to draw the ramp and vehiclee
 end
 
 to-report in-wind? [u v]  ; reports true if u,v is inside the focus window
@@ -750,7 +757,6 @@ to run-vehicles
   ; using the starting position, move vehicle forward only if running? is true
   if running? and not old-running? [   ; must be the first cycle 
     set old-running? true       
-    set data-series []     ; erase prior data series (this list will be exported at the end of the run)
     set saved-starting-x dist-from-zero 
     set start-height (precision height 2) ]          ; save the starting height
   set time time + dt
@@ -775,11 +781,10 @@ end
 
 to handle-run-end      ; This is called once when the vehicle has not moved for a while, indicating that the run is over. Called by run-vehicles
   set running? false   ; this stops the calculations and unlocks the sliders
-  set waiting-for-setup? true   ; require the next user action be pressing the setup button
+  set ready-for-export? true   ; require the next user action be analyzing the data
   clear-output         ; erase previous instructions
   update-score         ; computes and displays the score
-  get-next-step        ; changes the step and level depending on the just-computed score
-  setup-game           ; sets up the various controls for this new step and level.
+  pretty-print "You can now analyze your data. Press the 'Analyze Data' button."
 ;  show-target          ; shows the target
 end
 
@@ -787,9 +792,19 @@ end
 ;end              replaced by track-height
     
 to setup-new-run
+  if not waiting-for-setup? [data-export:log-event "User tried to setup a new run before analyzing data." "" "" ""
+    stop]
+  let endpoint 0
+  ask vehicle first v-who [ set endpoint (precision x-val 2) ]
+  data-export:log-event "User set up a new run." (create-run-parameter-list endpoint) "" ""
+  set waiting-for-setup? false
+  set waiting-for-start? true
+  clear-output
+;  get-next-step        ; changes the step and level depending on the just-computed score
+  setup-game           ; sets up the various controls for this new step and level.
   show-target          ; shows the new target
   set time 0
-  erase-data
+  ask graph-dots [die]     ; erase-data  
   set run-number run-number + 1 
   ask vehicles [set color item (run-number mod 6) vehicle-colors]
   switch-focus-to 2  ; reset the grid
@@ -800,7 +815,7 @@ to setup-new-run
   
   switch-focus-to 1
   set x-center 1.35
-  move-ramp
+  draw-ramp
   if not empty? v-who [
     let i 0 
     while [i < length v-who][
@@ -810,10 +825,9 @@ to setup-new-run
       set i i + 1]]
   set running? false ; the simulation is not recording
   set old-running? false  ; used to trap the first cycle (probably redundant)
-  set saved-time-series []  ; this contains the data to be exported
+  data-export:clear-last-run
 ;  set waiting-for-setup? false  ; ignore this procedure if the next user action must be pressing the setup button
   show-target      ; shows the target for this level and step
-  clear-output
   pretty-print instructions
   tick
 end
@@ -1015,10 +1029,6 @@ to hide-graph
   ask grid-dots [die]
 end
 
-to erase-data
-  ask graph-dots [die]
-end
-
 to add-vehicle
   create-vehicles 1 [
 ;    switch-focus-to 1
@@ -1048,11 +1058,25 @@ to remove-vehicle ; removes the selected vehicle
 end
 
 to start-run
-  if waiting-for-setup? [stop]  ; ignore this procedure if the next user action must be pressing the setup button
+  if waiting-for-setup? [
+    data-export:log-event "User tried to start before pressing 'setup'." "" "" ""
+    stop]  ; ignore this procedure if the next user action must be pressing the setup button
+  if not waiting-for-start? [stop]
+  if running? [data-export:log-event "User tried to start while running." "" "" ""
+    stop]            ; ignore if running
+  if ([x-val] of vehicle first v-who) >= 0 [
+    pretty-print "Place the car on the ramp." 
+    data-export:log-event "User tried to start with car on the level floor." "" "" ""
+    stop ] ; if the car is not on the ramp, stop
   if not data-saved? [
-    if user-yes-or-no? "If you run now, you will lose data. Do you want to save your data before running? " [stop]]
+    if user-yes-or-no? "If you run now, you will lose data. Press the 'Analyze data' button to save your data." [stop]]
   set data-saved? false
-  erase-data
+  set waiting-for-start? false
+  set ready-for-export? false
+  ask graph-dots [die]   ; erase data
+  let endpoint 0
+  ask vehicle first v-who [ set endpoint (precision x-val 2) ]
+  data-export:log-event (word "User started the model with the following level and step: " level " " step ".") (create-run-parameter-list endpoint) "" ""
   set running? true
   set blinking? false
   set time 0
@@ -1091,12 +1115,16 @@ to autoscale
     setxy (mxx * x-val + bxx) (myy * y-val + byy)]
 end
 
-to capture-final-state     ; 
-  set old-running? false
-  ask vehicle first v-who [
-    update-run-series (precision x-val 2) ]
-;  update-data-series  ; makes the list of time-series data available 
+to capture-final-state
+  if not starting? and not running? [
+    set old-running? false
+    set ready-for-export? true
+    ; saves this experiment in an exportable form as a run
+    ask vehicle first v-who [
+      update-run-series (precision x-val 2) ]
+  ]
 end
+
 
 to get-next-step    ; determines whether the student stays at this step, goes up, or goes down
                     ; carries over to the next or previous level
@@ -1110,12 +1138,12 @@ to get-next-step    ; determines whether the student stays at this step, goes up
      if step > n-steps [
        clear-output
        pretty-print (word "Congratulations! You earned " score-last-run " points! You advance to a new level!!")
-       ifelse level <= max-level
+       ifelse level < max-level
          [set step 1
           set level level + 1 ]
          [set level n-steps 
            clear-output 
-           pretty-print (word "Incredible!! You have reached the highest step at the hightes level. You are a winner." )
+           pretty-print (word "Incredible!! You have reached the highest step at the hightest level. You are a winner." )
            ]]      ; if the student is on the last level, keep at the highest step. 
      stop]  ; 
    if score-last-run > lower-break [
@@ -1125,7 +1153,7 @@ to get-next-step    ; determines whether the student stays at this step, goes up
    if score-last-run <  lower-break [
      clear-output
      let m (word "Not so good. You score " score-last-run " points.")
-     if step > 1 or level > 1 [set m word m "Try an easier problem."]
+     if step > 1 or level > 1 [set m word m " Try an easier problem."]
      pretty-print m
      set step step - 1 
      if step < 1 [
@@ -1143,7 +1171,7 @@ end
 to setup-game-level ; setup the game for the current level.
   if level = 1 [
     set instructions "Make the car stop in the center of the red area by changing the car's starting position."
-    set instructions word instructions " Save your data each run. You will need it later."
+;    set instructions word instructions " Save your data each run by pressing the 'Analyze Data' button. You will need it later."
     set friction .5
     set old-friction friction
 ;    set old-air-friction air-friction
@@ -1199,6 +1227,7 @@ to setup-game-level ; setup the game for the current level.
   
   if level = 4 [
     set instructions "Now made the car stop in the center of the red area by changing the friction. You cannot change the car's starting position."
+    set instructions word instructions "\nYou will find it helpful to change the vertical axis of the graph to friction."
     set friction .5
     set old-friction friction
 ;    set air-friction .2
@@ -1258,6 +1287,8 @@ to update-score  ; called once by handle-run-end at the end of a run
      set score-last-run 5 * round (.2 * score-last-run )]   ; round to the nearest 5 points
   set total-score round (total-score + score-last-run)
   set score-last-run round score-last-run
+  data-export:log-event (word "User score: " score-last-run ".") "" "" ""
+  data-export:log-event (word "User max score:" max-score ".") "" "" ""
 end             
 
 to display-help-message 
@@ -1275,9 +1306,9 @@ to display-help-message
     if number-shown-already = 2 [
       set m "After a good score you advance by one step and the red band gets smaller. "]    
     if number-shown-already = 3 [
-      set m "Before you can make a run, you need to press the 'Setup Run' button. "]    
+      set m "Before you can make a run, you need to press the 'Setup New Run' button. "]    
     if number-shown-already = 4 [
-      set m "The 'Setup Run' button returns the car to its previous starting position. "]  
+      set m "The 'Setup New Run' button returns the car to its previous starting position. "]  
     if number-shown-already = 5 [
       set m "After each run, save your data by pressing the 'Save Data' button. " ]]
     
@@ -1315,30 +1346,21 @@ to display-help-message
   ; update the messages-shown list
   set messages-shown replace-item (level - 1) messages-shown (number-shown-already + 1)
   set number-of-hints reduce + messages-shown
+  data-export:log-event (word "User received the hint " m) "" "" ""
 end
 
-to save-data ;
-  data-export:make-model-data
-  data-export:make-research-data      ; this is new
+to analyze-data ;
+  if not ready-for-export? [data-export:log-event "User tried to analyze data before a run." "" "" ""
+    stop]    
+  capture-final-state
+  clear-output
+  pretty-print "Data saved. Do you see the new point on the graph?"
+  pretty-print "Now setup an new run by pressing the 'Setup New Run' button."
+  set ready-for-export? false
   set data-saved? true
+  set waiting-for-setup? true
+  get-next-step
 end
-
-to data-export:make-research-data
-end
-
-;to save-for-output ; this program updates saved-time-series, a list of lists containing [t, x, y, speed] for every .25 sec
-  ; it also rounds off the variables to a reasonable number of digits
-;  ask vehicle (first v-who) [  ; this version only suports one vehicle
-;    let t precision time 3
-;    set total-distance (precision x-val 2)
-;    let y precision y-val 2
-;    let s precision speed 2
-;    let point (list t total-distance y s)
-;    set saved-time-series lput point saved-time-series ]
-;  set saved-height precision height 2
-;  set saved-total-time precision time 2
-;end
-
 
 ;;;
 ;;; Start of data-export methods
@@ -1384,36 +1406,25 @@ end
 ;;;
 
 to setup-data-export
-  let computational-inputs [
+  let computational-inputs [       ; students can adjust
     [ "Start height" "m" 0 1.5 true ]
     [ "Friction" "" 0 1 true ]]
-  let representational-inputs [ ]
-  let computational-outputs [
+  let representational-inputs [ ]  ; student analysis of run
+  let computational-outputs [      ; calculated
     [ "End distance" "s" 0 6 true ]]
-  let student-inputs [ ]
-  let model-information [
-    [ "ramp" "RampGame.v2.nlogo" "Sept " ] ]
-  let setup (list computational-inputs representational-inputs computational-outputs student-inputs model-information [])
+  let student-inputs [ ]           ; other student actions during analysis
+  let model-information [          ; 
+    [ "ramp" "RampGame.v3.nlogo" "Sept " ] ]
+  let time-series-data [
+;    [ "Time" "s" 0 0.1 ]           ; Check
+;    [ "Distance" "m" 0 0.6 ]
+;    [ "Height" "m" -10 10 ]
+;    [ "Speed" "m/s" -10 10 ]
+    ]
+  let setup (list computational-inputs representational-inputs computational-outputs student-inputs model-information time-series-data)
   data-export:initialize setup
 end
 
-;;;; The following is Bob's imagined code for setting up the research data export. 
-;;;; The variables are are simpler than the data export--just single values. 
-;;;; This calls data-export:initialize-research which needs to be written--I've just made a stub so it compiles. 
-
-to setup-research-export
-  let research-data [
-    [ "Time" ]
-    [ "Level"  ]
-    [ "Step" ]
-    [ "Score this run" ]
-    [ "Target position" ]
-    [ "Hints used" ]] 
-  data-export:initialize-research research-data 
-end
-
-to data-export:initialize-research [data]
-end
 
 ;;;
 ;;; update-run-series 
@@ -1428,22 +1439,11 @@ to update-run-series [endpoint]
   let student-inputs          []
   let run-series-data ( list computational-inputs representational-inputs computational-outputs student-inputs )
   data-export:update-run-series run-series-data
+  data-export:log-event "User explorted the model." (create-run-parameter-list endpoint) "" ""
 end
 
-;;;;  Bob's imagined way of loading data for research
-;;;;  Research-data contains: 
-;;;;     "Time" 
-;;;;     "Level"  
-;;;;     "Step" 
-;;;;     "Score last run" 
-;;;;     "Target position" 
-;;;;     "Hints used" 
-to update-research-data         
-  let research-data (list timer level step score-last-run target number-of-hints)
-  data-export:update-research-data research-data
-end
-
-to data-export:update-research-data [x]   ;;;;
+to-report create-run-parameter-list [endpoint]
+  report (list start-height friction endpoint)
 end
 
 ;;;
@@ -1532,9 +1532,9 @@ NIL
 
 BUTTON
 18
-331
+332
 115
-365
+366
 Setup New Run
 setup-new-run
 NIL
@@ -1550,8 +1550,8 @@ NIL
 BUTTON
 18
 366
-197
-399
+213
+400
 Start
 Start-run
 NIL
@@ -1567,7 +1567,7 @@ NIL
 SLIDER
 17
 398
-196
+213
 431
 Friction
 Friction
@@ -1582,8 +1582,8 @@ HORIZONTAL
 TEXTBOX
 21
 431
-195
-458
+210
+459
 This slider sets the friction in the car's wheels. 
 10
 0.0
@@ -1633,37 +1633,37 @@ OUTPUT
 209
 636
 454
-14
+15
 
 MONITOR
-19
-212
-121
-269
+21
+219
+106
+268
 Total Score
 Total-Score
 17
 1
-14
+12
 
 MONITOR
-122
-224
-211
-269
+105
+219
+214
+268
 Score last run
-Score-last-run
+(word Score-last-run \" out of \" max-score)
 17
 1
-11
+12
 
 MONITOR
-22
+20
 281
-79
+80
 326
-NIL
 Level
+(word Level \" of \" max-level)
 17
 1
 11
@@ -1673,8 +1673,8 @@ MONITOR
 281
 134
 326
-NIL
 Step
+(word Step \" of \" n-steps)
 17
 1
 11
@@ -1693,10 +1693,10 @@ Max-score
 BUTTON
 115
 332
-198
-365
-Save data
-save-data
+212
+366
+Analyze data
+analyze-data
 NIL
 1
 T
@@ -2135,7 +2135,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.0.3
+NetLogo 5.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
