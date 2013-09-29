@@ -40,6 +40,7 @@ globals [
   vehicle-starts
   vehicle-offsets
   vehicle-sizes
+  vehicle-locked?
   move-ramp-left?   ; set true when the vehicle runs off one side or the other
   move-ramp-right?
   v-who          ; a list of the whos of visible vehicles
@@ -299,7 +300,7 @@ to initialize
     create-link-with marker marker-1 [
       set thickness 6 set color red]]
   set data-saved? true
-  set output-width  48      ; characters in the output box, used with pretty-print
+  set output-width  48     ; characters in the output box, used with pretty-print
   set total-score 0
   set score-last-run 0
   set messages-shown [0 0 0 0 0 0 ] ; initializes the number of help messages already shown to the student, by level
@@ -492,6 +493,7 @@ end
 
 to handle-mouse-drag
   if click = 0 [stop]  ; click determines the kind of object being dragged 0: none, 1: ramp, 2: vehicle, 3: background
+  if click = 2 and vehicle-locked? [stop]
   ; called continuously as long as the mouse remains down
   if click = 1 and selected-ramp-index != false [    ; if a handle on the ramp has been previously selected
     if not in-wind? mouse-xcor mouse-ycor [stop] ; dont move the mouse outside the window
@@ -1157,10 +1159,7 @@ to get-next-step    ; determines whether the student stays at this step, goes up
      pretty-print m
      set step step - 1 
      if step < 1 [
-       ifelse level = 1
-         [set step 1]
-         [set level level - 1
-           set step n-steps - 1]]]
+       set step 1]]
 end
 
 to setup-game     ; sets all the controls for the current level and step
@@ -1179,6 +1178,7 @@ to setup-game-level ; setup the game for the current level.
     set air-friction-locked? true
     set starting-position-locked? false
     set ramp-locked? true
+    set vehicle-locked? false
     set starting-position-max -1
     set starting-position-min -1
     set max-score  100   ; the maximum score for one run that is possible for this level
@@ -1200,10 +1200,11 @@ to setup-game-level ; setup the game for the current level.
     set ramp-locked? true
     set max-score  150   ; the maximum score for one run that is possible for this level
     set n-steps  4
+    set vehicle-locked? false
     set starting-position-max -1
     set starting-position-min -1
-    set target-radius-max .4 ; the distance between the center and edge of the target for step 1
-    set target-radius-min .2 ; the distance for the highest step in this level
+    set target-radius-max .5 ; the distance between the center and edge of the target for step 1
+    set target-radius-min .3 ; the distance for the highest step in this level
     set target-max 3  ; each step, the target is set at random between target-max and target-min
     set target-min 1]   ; to defeat random placement of the target, set min to max. 
   
@@ -1216,12 +1217,13 @@ to setup-game-level ; setup the game for the current level.
     set friction-locked? true
     set air-friction-locked? false
     set ramp-locked? true
+    set vehicle-locked? false
     set max-score  200   ; the maximum score for one run that is possible for this level
     set n-steps  4
+    set starting-position-max -1
     set starting-position-min -1
-    set starting-position-min -1
-    set target-radius-max .4 ; the distance between the center and edge of the target for step 1
-    set target-radius-min .2 ; the distance for the highest step in this level
+    set target-radius-max .5 ; the distance between the center and edge of the target for step 1
+    set target-radius-min .3 ; the distance for the highest step in this level
     set target-max 2     ; each step, the target is set at random between target-max and target-min
     set target-min 2]   ; to defeat random placement of the target, set min to max. 
   
@@ -1233,13 +1235,14 @@ to setup-game-level ; setup the game for the current level.
 ;    set air-friction .2
     set starting-position-locked? true    
     set friction-locked? false
-    set air-friction-locked? false
+    set air-friction-locked? true
     set ramp-locked? true
+    set vehicle-locked? true
     set max-score  250   ; the maximum score for one run that is possible for this level
     set n-steps  4
-    set starting-position-min -1
-    set starting-position-min -1
-    set target-radius-max .4 ; the distance between the center and edge of the target for step 1
+    set starting-position-max -.52
+    set starting-position-min -.52
+    set target-radius-max .5 ; the distance between the center and edge of the target for step 1
     set target-radius-min .2 ; the distance for the highest step in this level
     set target-max 1     ; each step, the target is set at random between target-max and target-min
     set target-min 3]   ; to defeat random placement of the target, set min to max. 
@@ -1325,12 +1328,14 @@ to display-help-message
       set number-shown-already -1 ]  ]
     
   if level = 3 [
-    set number-shown-already number-shown-already mod 3
+    set number-shown-already number-shown-already mod 4
     if number-shown-already = 0 [    
-      set m "At this level, the friction is lower than before." ]  
+      set m "You will find it helpful to clear out all the graph data before starting." ]  
     if number-shown-already = 1 [    
-      set m "Now when you save data, the points will trace out a different graph of distance against starting height." ] 
+      set m "At this level, the friction is lower than before." ] 
     if number-shown-already = 2 [    
+      set m "Now when you save data, the points will trace out a different graph of distance against starting height." ] 
+    if number-shown-already = 3 [    
       set m "Hint: use the new graph of distance against starting height to predict starting positions at this level." ] ]       
   
   if level = 4 [
@@ -1338,7 +1343,7 @@ to display-help-message
     if number-shown-already = 0 [    
       set m "At this level, you cannot change the starting position of the car--you have to change friction." ]  
     if number-shown-already = 1 [    
-      set m "Hint: Change the horizontal axis of the graph on the right to friction." ] 
+      set m "Hint: Change the horizontal axis of the graph on the right to friction. Also clear out the old data." ] 
     if number-shown-already = 2 [    
       set m "Hint: Use the graph that shows the distance the car travels as it depends on friction." ]]        
     
@@ -1633,7 +1638,7 @@ OUTPUT
 209
 636
 454
-15
+13
 
 MONITOR
 21
@@ -2135,7 +2140,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.0.4
+NetLogo 5.0.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
