@@ -1411,7 +1411,7 @@ to setup-data-export
     [ "Friction" "" 0 1 true ]]
   let representational-inputs [ ]  ; student analysis of run
   let computational-outputs [      ; calculated
-    [ "End distance" "s" 0 6 true ]]
+    [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
     [ "ramp" "RampGame.v3.nlogo" "Sept " ] ]
