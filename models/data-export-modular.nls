@@ -159,11 +159,14 @@ globals [
   data-export:representational-inputs
   data-export:representational-inputs-keys
   data-export:representational-inputs-categorical-keys
+  data-export:representational-inputs-labels
   data-export:computational-outputs
   data-export:computational-outputs-keys
   data-export:computational-outputs-categorical-keys
+  data-export:computational-outputs-labels
   data-export:student-inputs
   data-export:student-inputs-keys
+  data-export:student-inputs-labels
   data-export:model-information
   data-export:model-information-keys
   data-export:times-series-data
@@ -196,13 +199,16 @@ to data-export:initialize [ setup ]
   set data-export:representational-inputs                  item 1 setup
   set data-export:representational-inputs-keys             [ "label" "units" "min" "max" ]
   set data-export:representational-inputs-categorical-keys [ "label" "units" "values" ]
+  set data-export:representational-inputs-labels data-export:calculate-representational-inputs-labels
 
   set data-export:computational-outputs                    item 2 setup
   set data-export:computational-outputs-keys               [ "label" "units" "min" "max" ]
   set data-export:computational-outputs-categorical-keys   [ "label" "units" "values" ]
+  set data-export:computational-outputs-labels data-export:calculate-computational-outputs-labels
 
   set data-export:student-inputs                           item 3 setup
   set data-export:student-inputs-keys                      [ "label" "units"]
+  set data-export:student-inputs-labels data-export:calculate-student-inputs-labels
 
   set data-export:model-information                        item 4 setup
   set data-export:model-information-keys                   [ "name" "fileName" "version"]
@@ -328,7 +334,7 @@ to data-export:log-event [ message values-list reason-code reason-text ]
   let output message
   let json ""
   if not empty? values-list [
-    let fields (word "\"fields\": " (data-export:json-array data-export:computational-inputs-labels) ",")
+    let fields (word "\"fields\": " (data-export:json-array (sentence data-export:computational-inputs-labels data-export:representational-inputs-labels data-export:computational-outputs-labels data-export:student-inputs-labels)) ",")
     let values (word "\"values\": " (data-export:json-array values-list) ",")
     set json (word json fields values)
   ]
@@ -358,6 +364,18 @@ end
 
 to-report data-export:calculate-computational-inputs-labels
   report (map [(word (item 0 ?1) " (" (item 1 ?1) ")")] data-export:computational-inputs)
+end
+
+to-report data-export:calculate-representational-inputs-labels
+  report (map [(word (item 0 ?1) " (" (item 1 ?1) ")")] data-export:representational-inputs)
+end
+
+to-report data-export:calculate-computational-outputs-labels
+  report (map [(word (item 0 ?1) " (" (item 1 ?1) ")")] data-export:computational-outputs)
+end
+
+to-report data-export:calculate-student-inputs-labels
+  report (map [(word (item 0 ?1) " (" (item 1 ?1) ")")] data-export:student-inputs)
 end
 
 to-report data-export:create-run-series [ run-series-data ]
