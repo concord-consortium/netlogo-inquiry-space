@@ -772,6 +772,7 @@ to run-vehicles
     let mid-speed speed + .5 * a * dt              ; estimate the speed mid-interval
     set x-val x-val + mid-speed * ch * dt          ; use the mid-interval speed to get the final x-value
     set speed mid-speed + .5 * a * dt              ; update the speed
+    if x-val > 5 [set speed 0]
     ifelse abs (speed - 0 ) > .0001                ; stop the car if it is at rest for more than ten intervals
       [set countdown loops-at-zero]
       [set countdown countdown - 1 ]
@@ -1578,7 +1579,7 @@ Friction
 Friction
 0
 1
-0.5
+0
 .01
 1
 NIL
