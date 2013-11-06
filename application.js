@@ -76,6 +76,7 @@ var ROOT = "",
           '     MAYSCRIPT="true">',
           '  <param name="DefaultModel" value="' + interactive.model.url + '"/>',
           '  <param name="MAYSCRIPT" value="true"/>',
+          '  <param name="permissions" value="sandbox"/>',
           '  Your browser is completely ignoring the applet tag!',
           '</applet>'].join('\n');
 
