@@ -405,7 +405,7 @@ var requirejs, require, define;
     };
 }());
 
-define("../vendor/almond/almond", function(){});
+define("../../vendor/almond/almond", function(){});
 
 /*global define: false */
 
@@ -432,19 +432,21 @@ define('lab.config',['require','common/actual-root'],function (require) {
   var actualRoot = require('common/actual-root'),
       publicAPI;
   publicAPI = {
-  "sharing": true,
+  "logging": false,
+  "tracing": false,
   "home": "http://lab.concord.org",
-  "homeForSharing": "http://lab.concord.org",
-  "homeInteractivePath": "/interactive.html",
-  "homeEmbeddablePath": "/embeddable.html",
+  "homeForSharing": null,
+  "homeInteractivePath": "/examples/interactives/interactive.html",
+  "homeEmbeddablePath": "/examples/interactives/embeddable.html",
   "utmCampaign": null,
   "fontface": "Lato",
-  "hostName": "lab4.dev.concord.org",
-  "dataGamesProxyPrefix": "DataGames/Games/concord/lab/",
-  "logging": true,
-  "tracing": false,
+  "hostName": "lab.concord.org",
+  "dataGamesProxyPrefix": null,
+  "sharing": true,
   "authoring": false,
-  "actualRoot": ""
+  "actualRoot": "",
+  "environment": "production",
+  "static": false
 };
   publicAPI.actualRoot = actualRoot;
   return publicAPI;
@@ -554,11 +556,15 @@ define('import-export/dg-exporter',['require','common/console'],function(require
     },
 
     isDgGameControllerDefined: function() {
-      return !!(window.parent && window.parent.DG && window.parent.DG.currGameController);
+      if (Lab.config.dataGamesProxyPrefix) {
+        return !!(window.parent && window.parent.DG && window.parent.DG.currGameController);
+      } else {
+        return false;
+      }
     },
 
     // Synonym...
-    isExportAvailable: function() {
+    canExportData: function() {
       return this.isDgGameControllerDefined();
     },
 
@@ -654,7 +660,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       // multiple exports during a single DG session.)
       this.doCommand('createCollection', {
         name: this.parentCollectionName,
-        attrs: [{name: 'Number of Time Points'}].concat(perRunColumnLabels),
+        attrs: perRunColumnLabels,
         childAttrName: 'contents'
       });
 
@@ -668,10 +674,9 @@ define('import-export/dg-exporter',['require','common/console'],function(require
 
       // Step 4. Open a row in the parent table. This will contain the individual time series
       // readings as children.
-      parentCollectionValues = [timeSeriesData.length].concat(perRunColumnValues);
       parentCase = this.doCommand('openCase', {
         collection: this.parentCollectionName,
-        values: parentCollectionValues
+        values: perRunColumnValues
       });
 
       // Step 5. Create rows in the child table for each data point. Using 'createCases' we can
