@@ -556,11 +556,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
     },
 
     isDgGameControllerDefined: function() {
-      if (Lab.config.dataGamesProxyPrefix) {
-        return !!(window.parent && window.parent.DG && window.parent.DG.currGameController);
-      } else {
-        return false;
-      }
+      return !!(window.parent && window.parent.DG && window.parent.DG.currGameController);
     },
 
     // Synonym...
