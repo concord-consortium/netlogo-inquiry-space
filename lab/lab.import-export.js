@@ -646,7 +646,8 @@ define('import-export/dg-exporter',['require','common/console'],function(require
 
       // Step 1. Tell DG we're a "game".
       this.doCommand('initGame', {
-        name: this.gameName
+        name: this.gameName,
+        collapseChildren: true
       });
 
       // Step 2. Create a parent table. Each row will have the value of each of the perRunData,
@@ -657,6 +658,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       this.doCommand('createCollection', {
         name: this.parentCollectionName,
         attrs: perRunColumnLabels,
+        collapseChildren: true,
         childAttrName: 'contents'
       });
 
@@ -665,6 +667,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       // (Again, it seems to be ok to call this for the same table multiple times per DG session)
       this.doCommand('createCollection', {
         name: this.childCollectionName,
+        collapseChildren: true,
         attrs: timeSeriesColumnLabels
       });
 
@@ -672,6 +675,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       // readings as children.
       parentCase = this.doCommand('openCase', {
         collection: this.parentCollectionName,
+        collapseChildren: true,
         values: perRunColumnValues
       });
 
@@ -680,6 +684,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       this.doCommand('createCases', {
         collection: this.childCollectionName,
         values: timeSeriesData,
+        collapseChildren: true,
         parent: parentCase.caseID
       });
 
@@ -687,6 +692,7 @@ define('import-export/dg-exporter',['require','common/console'],function(require
       this.doCommand('closeCase', {
         collection: this.parentCollectionName,
         values: parentCollectionValues,
+        collapseChildren: true,
         caseID: parentCase.caseID
       });
     },
