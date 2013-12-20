@@ -4,12 +4,12 @@
     "url": "models/IS-climate-change-v14-logging.nlogo",
     "viewOptions": {
       "dimensions": {
-        "width": 900,
-        "height": 500
+        "width": 885,
+        "height": 530
       },
       "appletDimensions": {
-        "width": 875,
-        "height": 454
+        "width": 860,
+        "height": 484
       }
     }
   },
