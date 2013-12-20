@@ -1445,7 +1445,7 @@ to update-run-series [endpoint]
   let student-inputs          []
   let run-series-data ( list computational-inputs representational-inputs computational-outputs student-inputs )
   data-export:update-run-series run-series-data
-  data-export:log-event "User explorted the model." (create-run-parameter-list endpoint) "" ""
+  data-export:log-event "User exported the model." (create-run-parameter-list endpoint) "" ""
 end
 
 to-report create-run-parameter-list [endpoint]
