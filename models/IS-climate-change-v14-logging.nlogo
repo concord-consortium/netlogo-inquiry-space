@@ -39,6 +39,7 @@ globals [
   run-duration
   data-available?
   analyzing?
+  new-run-reset?
 
   old-sun-brightness
   old-albedo
@@ -54,6 +55,7 @@ to startup
   set analyzing? false
   set data-available? false
   set running? false
+  set new-run-reset? false
 end 
 
 to show-start-screen
@@ -135,6 +137,10 @@ to analyze-data ;
     ]
     update-run-series
     set data-available? false
+    if new-run-reset? [
+      clear
+      set new-run-reset? false
+    ]
   ]
 end
 ;;;;;; end export related
@@ -151,8 +157,8 @@ to clear-data
         "Lose current data and set up new run?" 
         ["Yes. Discard current data." "No. Analyze the data, and set up new run."]
       if ans = "No. Analyze the data, and set up new run." [
+        set new-run-reset? true
         analyze-data
-        clear
       ]
       if ans = "Yes. Discard current data." [
         let options []
