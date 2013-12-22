@@ -107,7 +107,11 @@ to on/off    ; this is the main execution loop--a 'forever' loop
     report-temperatures  ;; computes current and average temperatures
     if year >= (start-year + run-duration - .1)  [  ; the .1 stops auto-rescale
       set running? false
+
+;;;;;; Data-export related
       update-data-series  ; make sure final value is in the data table
+;;;;;; end export related
+
       ; may need a message here saying run end--that the run cannot exceed 100 years
       ]
     set year year + time-step
@@ -118,7 +122,11 @@ end
 to run-model  ; this turns on running? so that the on/off loop executes the model
   if not analyzing? and not starting-up?[
     set running? true
+    
+;;;;;; Data-export related
     data-export:log-event "User started the model." (create-run-parameter-list) "" ""  
+;;;;;; end export related
+
   ]
 end 
 
@@ -148,7 +156,11 @@ end
 to clear-data
   if not starting-up? [
     if running? [
+
+;;;;;; Data-export related
         data-export:log-event "User pressed new run before end of a run." "" "" ""
+;;;;;; end export related
+
         stop-model
     ]
     if not data-available? [clear]
@@ -158,7 +170,11 @@ to clear-data
         ["Yes. Discard current data." "No. Analyze the data, and set up new run."]
       if ans = "No. Analyze the data, and set up new run." [
         set new-run-reset? true
+
+;;;;;; Data-export related
         analyze-data
+;;;;;; end export related
+
       ]
       if ans = "Yes. Discard current data." [
         let options []
@@ -173,8 +189,12 @@ to clear-data
         let ans1 user-one-of "Why do you want to remove the data?" options
         set other-reason ""
         if ans1 = a4 [set other-reason user-input "Why do you want to remove the data?"]
+
+;;;;;; Data-export related
         data-export:log-event "User discarded data." (create-run-parameter-list) ans1 other-reason
         data-export:clear-last-run
+;;;;;; end export related
+
         clear
       ]
     ]
@@ -192,7 +212,11 @@ to clear
   set analyzing? false
   clear-output
   set old-year start-year
+
+;;;;;; Data-export related
   data-export:log-event "User set up a new run." (create-run-parameter-list) "" ""
+;;;;;; end export related
+
 end
 
 to act-on-changes   ; detects changes in the sliders and selector
@@ -429,10 +453,14 @@ to report-temperatures
   set temperature .99 * temperature + .01 * current-temperature ; running average over 100 values
   set smooth-temperature beta * smooth-temperature + alpha * temperature  ; running average of that. 
   update-plots  ; give time for the transients to settle down
+
+;;;;;; Data-export related
   if (round year) > old-year [
     update-data-series
     set old-year round year
   ]
+;;;;;; end export related
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -509,6 +537,7 @@ end
 ;;;;;;;;;;;;;;;;  Data export  ;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;; Data-export related
 to setup-data-export
   let computational-inputs [       ; students can adjust
     [ "CO2 Level" "ppm" 0 1000 true ]
@@ -564,6 +593,7 @@ end
 to update-data-series 
   data-export:update-data-series (list round year precision temperature 1 precision smooth-temperature 1)
 end
+;;;;;; end export related
 @#$#@#$#@
 GRAPHICS-WINDOW
 4
