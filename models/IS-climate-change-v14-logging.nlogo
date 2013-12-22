@@ -155,14 +155,14 @@ end
 
 to clear-data
   if not starting-up? [
-    if running? [
+;    if running? [
 
 ;;;;;; Data-export related
-        data-export:log-event "User pressed new run before end of a run." "" "" ""
+;        data-export:log-event "User pressed new run before end of a run." "" "" ""
 ;;;;;; end export related
 
         stop-model
-    ]
+;    ]
     if not data-available? [clear]
     if data-available? [
       let ans user-one-of 
