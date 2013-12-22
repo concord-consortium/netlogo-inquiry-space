@@ -174,6 +174,7 @@ to clear-data
         set other-reason ""
         if ans1 = a4 [set other-reason user-input "Why do you want to remove the data?"]
         data-export:log-event "User discarded data." (create-run-parameter-list) ans1 other-reason
+        data-export:clear-last-run
         clear
       ]
     ]
