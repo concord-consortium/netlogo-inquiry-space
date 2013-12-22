@@ -273,6 +273,7 @@ to initialize-variables         ; these are initialized only once, when the prog
   set CO2-level 400
   set old-CO2-level CO2-level
   set data-available? false
+  set new-run-reset? false
 end
 
 to update-albedo      ; reads the albedo slider and sets the color of the earth top accordingly
