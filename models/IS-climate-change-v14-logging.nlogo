@@ -191,6 +191,7 @@ to clear
   set data-available? false
   set analyzing? false
   clear-output
+  set old-year start-year
   data-export:log-event "User set up a new run." (create-run-parameter-list) "" ""
 end
 
