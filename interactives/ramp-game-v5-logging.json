@@ -1,0 +1,18 @@
+{
+  "model": {
+    "modelType": "netlogo-applet",
+    "url": "models/RampGame.v5-logging.nlogo",
+    "viewOptions": {
+      "dimensions": {
+        "width": 690,
+        "height": 500
+      },
+      "appletDimensions": {
+        "width": 667,
+        "height": 470
+      }
+    }
+  },
+  "components": [
+  ]
+}
