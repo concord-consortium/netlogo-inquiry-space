@@ -1523,7 +1523,7 @@ to setup-data-export
     [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
-    [ "ramp" "RampGame.v3.nlogo" "Sept " ] ]
+    [ "ramp" "RampGame.v5.nlogo" "Jan-6-2014" ] ]
   let time-series-data [
 ;    [ "Time" "s" 0 0.1 ]           ; Check
 ;    [ "Distance" "m" 0 0.6 ]
