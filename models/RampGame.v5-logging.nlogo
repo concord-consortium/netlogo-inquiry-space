@@ -1,6 +1,6 @@
-; RampGame
-; Jan 6, 2013
-; Started July 22, 2014
+; RampGame v5b
+; Jan 8, 2014
+; Started July 22, 2013
 ; Based on SuperRamp
 ; Bob Tinker
 ; Copyright, the Concord Consortium
@@ -327,7 +327,7 @@ to initialize
   setup-game        ; setup for level 1 step 1
   show-target
   clear-output
-  pretty-print "Challenge 1: Make the car stop in the middle of the red zone. You can adjust the starting position of the car."
+  pretty-print "Challenge 1: Make the car stop in the middle of the red zone. You can drag the car to your desired starting position."
   pretty-print "As you get better, the red target will get smaller."
   setup-data-export    ;;; used to define the structure of the exported data
   setup-new-run
@@ -481,7 +481,7 @@ to handle-mouse-click
     if click = 1 [stop] ]
   
                                 ; check all vehicles for one near the mouse
-  if not empty? v-who [         ; skip if there are no vehicles
+  if (not running?) and (not empty? v-who) [         ; skip if there are no vehicles or if the model is running
     let i 0                     ; v-who contains a list of the whos of current vehicles
     while [i < length v-who] [  ; check each vehicle
       let w item i v-who
@@ -533,7 +533,7 @@ to handle-mouse-drag
       let p list x y  ; p is the [x,y] location of the mouse
       set ramp replace-item i ramp p ; replace item i of ramp with p, where i is selected-ramp-index
       draw-ramp ]]        ; now redraw the ramp
-  if click = 2 [
+  if click = 2 and not running? [
     ask vehicle selected-vehicle [
       place-vehicle ((mouse-xcor - bxx) / mxx)]  ; place the vehicle on the track at the mouse x-coordinate
     set blinking? true
@@ -811,10 +811,19 @@ to handle-run-end      ; This is called once when the vehicle has not moved for 
   set running? false   ; this stops the calculations and unlocks the sliders
   set ready-for-export? true   ; require the next user action be analyzing the data
   clear-output         ; erase previous instructions
-;  update-score         ; computes and displays the score
   pretty-print "You can now analyze your data. Press the 'Analyze Data' button."
-;  show-target          ; shows the target
 end
+
+to capture-final-state
+  if not starting? and not running? [
+    set old-running? false
+    set ready-for-export? true
+    ; saves this experiment in an exportable form as a run
+    ask vehicle first v-who [
+      update-run-series (precision final-position 2) ]
+  ]
+end
+
     
 to setup-new-run
   if not waiting-for-setup? [data-export:log-event "User tried to setup a new run before analyzing data." "" "" ""
@@ -1151,17 +1160,6 @@ to autoscale
     setxy (mxx * x-val + bxx) (myy * y-val + byy)]
 end
 
-to capture-final-state
-  if not starting? and not running? [
-    set old-running? false
-    set ready-for-export? true
-    ; saves this experiment in an exportable form as a run
-    ask vehicle first v-who [
-      update-run-series (precision x-val 2) ]
-  ]
-end
-
-
 to get-next-step    ; determines whether the student stays at this step, goes up, or goes down and displays the score
                     ;   computes the next-step and next-level for setup-next-run
                     ; gives message about score and success and changes in step and level
@@ -1221,7 +1219,7 @@ to setup-game-level ; setup the game for the current level.
       set instructions word instructions " As you get better, the red target will get smaller."
       set instructions word instructions " When you press 'Analyze Data' your data is saved and graphed. The graph will help you later."
     ]
-    set friction .2
+    set friction .18
     set old-friction friction
     set friction-locked? true
     set air-friction-locked? true
@@ -1230,18 +1228,18 @@ to setup-game-level ; setup the game for the current level.
     set vehicle-locked? false
     set starting-position-max -1
     set starting-position-min -1
-    set n-steps  4   
+    set n-steps  3   
     set target-radius-max .6 ; the distance between the center and edge of the target for step 1
     set target-radius-min .2 ; the distance for the highest step in this level
-    set target-max 2    ; the target is placed at random between target-max and target-min
-    set target-min 2]   ; to defeat random placement of the target, set min to max. 
+    set target-max 2.2    ; the target is placed at random between target-max and target-min
+    set target-min 2.2]   ; to defeat random placement of the target, set min to max. 
   
   if level = 2 [
     set instructions ""
     if step = 1 [
       set instructions "Challenge 2: Make the car stop in the center of the red area by changing the car's starting position."
       set instructions word instructions " Watch out!! The red band now moves each trial."]
-    set friction .2
+    set friction .18
     set old-friction friction
 ;    set air-friction .2
     set friction-locked? true
@@ -1260,7 +1258,7 @@ to setup-game-level ; setup the game for the current level.
   if level = 3 [
     set instructions ""
     if step = 1 [set instructions "Challenge 3: Make a new car stop in the red area. This car has less friction."]
-    set friction .1
+    set friction .08
     set mass 100
     set old-friction friction
     set starting-position-locked? false    
@@ -1280,7 +1278,7 @@ to setup-game-level ; setup the game for the current level.
     set instructions ""
     if step = 1 [set instructions "Challenge 4: Make this heavier car stop in the center of the red area. This car is twice the mass of the last car."]
 ;    set instructions word instructions "\nYou will find it helpful to change the x-axis of the graph to ramp-height."
-    set friction .2
+    set friction .18
     set mass 200
     set old-friction friction
     set starting-position-locked? false    
@@ -1299,7 +1297,7 @@ to setup-game-level ; setup the game for the current level.
   if level = 5 [
     set instructions ""
     if step = 1 [set instructions "Challenge 5: Now make the car stop in the center of the red area by changing the friction. "]
-    set friction .2
+    set friction .18
     set mass 100
     set old-friction friction
 ;    set air-friction .2
@@ -1367,9 +1365,14 @@ to update-score  ; called once by analyze-data
   if abs (final-position - target) > 2 * target-radius [  ; very bad try, may be random
     set number-of-random-tries number-of-random-tries + 1
     if number-of-random-tries > 2 [
-      set number-of-random-tries 2   
       pretty-print "It looks like you are just guessing. All the information that you need to hit the target is in the graph."
-      wait 5]]
+      wait 5]
+    if number-of-random-tries > 3 [
+      set number-of-random-tries 4
+      pretty-print "You loose 100 points for gussing." 
+      set total-score total-score - 100
+      if total-score < 0 [set total-score 0 ]] 
+    ]
     
   data-export:log-event (word "User score: " score-last-run ".") "" "" ""
   data-export:log-event (word "User max score:" max-score ".") "" "" ""
@@ -1406,9 +1409,15 @@ to display-help-message
     if number-shown-already = 2 [
       set m "The graph can help you find the best place to start the car. "]    
     if number-shown-already = 3 [
-      set m "Look carefully at the graph that shows starting height and distance traveled. "
-;      set number-shown-already -1 
-    ]]
+      set m "Look carefully at the graph that shows starting height and distance traveled. "]
+    if number-shown-already = 4 [
+      set m "Clicking on the gear at the top right of the graph allows you to connect points. Try this."]
+    if number-shown-already = 5 [
+      set m "Under the gear is an option to draw and drag a line. This can be a big help. " ]
+    if number-shown-already = 5 [
+      set m "Expanding the scales on the graph can help you read values from the graph accurately."
+      set m word m " Do this by dragging at the end of the scales. To undo this, use the option under the gear to show all the data."   ] 
+    ]
     
   if level = 3 [
     if number-shown-already = 0 [    
@@ -1436,7 +1445,7 @@ to display-help-message
     if number-shown-already = 1 [    
       set m "To let the car go farther, do you think you should increase or decrease friction?"]
     if number-shown-already = 2 [    
-      set m "Hint: Change the x-axis of the graph to friction." ] 
+      set m "Hint: Use the graph that has friction on the x-axis." ] 
     if number-shown-already = 3 [    
       set m "On the graph, you want to see only the points generated by challenge 5. "
       set m word m "You can do this by selecting only the last items in the table, the ones with starting position .38 m."]
@@ -1516,14 +1525,17 @@ end
 
 to setup-data-export
   let computational-inputs [       ; students can adjust
+    [ "Challenge" "" 1 5 true ]
+    [ "Step" "" 1 8 true ]
     [ "Start height" "m" 0 1.5 true ]
-    [ "Friction" "" 0 1 true ]]
+    [ "Friction" "" 0 .3 true ]
+    [ "Mass" "g" 100 200 true ]]
   let representational-inputs [ ]  ; student analysis of run
   let computational-outputs [      ; calculated
     [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
-    [ "ramp" "RampGame.v5.nlogo" "Jan-6-2014" ] ]
+    [ "ramp" "RampGame.v5b.nlogo" "Jan-7-2014" ] ]
   let time-series-data [
 ;    [ "Time" "s" 0 0.1 ]           ; Check
 ;    [ "Distance" "m" 0 0.6 ]
@@ -1542,7 +1554,7 @@ end
 ;;;
 
 to update-run-series [endpoint]    
-  let computational-inputs     list start-height friction  
+  let computational-inputs     (list level step start-height friction mass) 
   let representational-inputs []
   let computational-outputs   ( list endpoint )
   let student-inputs          []
@@ -1552,7 +1564,7 @@ to update-run-series [endpoint]
 end
 
 to-report create-run-parameter-list [endpoint]
-  report (list start-height friction endpoint)
+  report (list start-height friction endpoint mass)
 end
 
 ;;;
@@ -1640,10 +1652,10 @@ NIL
 1
 
 BUTTON
-117
-362
-214
-396
+115
+243
+212
+277
 Setup New Run
 setup-new-run
 NIL
@@ -1657,10 +1669,10 @@ NIL
 1
 
 BUTTON
-19
-328
-214
-362
+17
+209
+212
+243
 Start
 Start-run
 NIL
@@ -1674,34 +1686,34 @@ NIL
 1
 
 SLIDER
-17
-398
-213
-431
+16
+288
+212
+321
 Friction
 Friction
 0
 .4
-0.2
-.01
+0.18
+.005
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-23
-434
-212
-462
+22
+324
+211
+352
 This slider sets the friction of the car on the floor.
 10
 0.0
 1
 
 MONITOR
-243
+146
 10
-359
+262
 55
 Height above Floor
 word precision Height 2 \" m\"
@@ -1710,9 +1722,9 @@ word precision Height 2 \" m\"
 11
 
 MONITOR
-358
+261
 10
-483
+386
 55
 Distance to the right
 word precision Dist-from-zero 2 \" m\"
@@ -1745,10 +1757,10 @@ OUTPUT
 13
 
 MONITOR
-21
-219
-106
-268
+19
+358
+104
+407
 Total Score
 Total-Score
 17
@@ -1756,10 +1768,10 @@ Total-Score
 12
 
 MONITOR
-105
-219
-214
-268
+103
+358
+212
+407
 Score last run
 score-display
 17
@@ -1767,10 +1779,10 @@ score-display
 12
 
 MONITOR
-21
-267
-105
-316
+19
+406
+103
+455
 Challenge
 (word Level \" of \" max-level)
 17
@@ -1778,10 +1790,10 @@ Challenge
 12
 
 MONITOR
-105
-267
-214
-316
+103
+406
+212
+455
 Step
 (word Step \" of \" n-steps)
 17
@@ -1789,10 +1801,10 @@ Step
 12
 
 BUTTON
-19
-362
-116
-396
+17
+243
+114
+277
 Analyze data
 analyze-data
 NIL
@@ -1806,12 +1818,23 @@ NIL
 1
 
 MONITOR
-482
+385
 10
-552
+455
 55
 Car Mass
 word mass \" g\"
+17
+1
+11
+
+MONITOR
+455
+10
+515
+55
+Friction
+Friction
 17
 1
 11
