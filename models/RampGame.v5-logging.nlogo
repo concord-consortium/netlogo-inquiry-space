@@ -1,5 +1,5 @@
-; RampGame v5b
-; Jan 8, 2014
+; RampGame v5e
+; Jan 11, 2014
 ; Started July 22, 2013
 ; Based on SuperRamp
 ; Bob Tinker
@@ -705,17 +705,24 @@ to connect [u0 v0 u1 v1 c wide]
   if u0 = u1 and v0 = v1 [stop] ; don't bother with points on top of each other
   let w 0 let w1 0
   create-drawing-dots 1 [
-    set size .06 * magnification 
-    set shape "square" set color black
-    set label-color red
-    set label word precision ((u0 - bxx) / mxx) 2 " m  "
-    ifelse on-edge? u0 v0 [ht][st]   ; hide the black dot and its label if it is on the edge
+    let x0 (u0 - bxx) / mxx 
+    set size .1 * magnification 
+    set shape "tick mark" set color black
+    set heading 0
+    ifelse (on-edge? u0 v0) or x0 < 0 [ht][st]   ; hide the tick mark if it is on the edge
     setxy u0 v0
     set w who]
+  create-drawing-dots 1 [      ; make a label for the square dot a bit lower and to the right of the dot
+    let x0 (u0 - bxx) / mxx 
+    if x0 >= 0 [        ; label only non-negative values
+      set size .1
+      set color yellow + 4.5  ; the same as the background
+      set label-color black
+      set label word (precision x0 2 ) " m"
+      ifelse on-edge? u0 v0 [ht][st]   ; hide the black dot and its label if it is on the edge
+      setxy u0 + 12 v0 - 12 ]] 
   create-drawing-dots 1 [
-    set size .06 * magnification 
-    set shape "square" set color black
-    ifelse on-edge? u1 v1 [ht][st]
+    ht 
     setxy u1 v1
     set w1 who
     create-link-with drawing-dot w [
@@ -831,7 +838,7 @@ to setup-new-run
   set step next-step 
   set level next-level
   let endpoint 0
-  ask vehicle first v-who [ set endpoint (precision x-val 2) ]
+  ask vehicle first v-who [ set endpoint (precision x-val 3) ]
   data-export:log-event "User set up a new run." (create-run-parameter-list endpoint) "" ""
   set waiting-for-setup? false
   set waiting-for-start? true
@@ -1535,7 +1542,7 @@ to setup-data-export
     [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
-    [ "ramp" "RampGame.v5b.nlogo" "Jan-7-2014" ] ]
+    [ "ramp" "RampGame.v5e.nlogo" "Jan-12-2014" ] ]
   let time-series-data [
 ;    [ "Time" "s" 0 0.1 ]           ; Check
 ;    [ "Distance" "m" 0 0.6 ]
@@ -2178,6 +2185,11 @@ Circle -16777216 true false 30 30 240
 Circle -7500403 true true 60 60 180
 Circle -16777216 true false 90 90 120
 Circle -7500403 true true 120 120 60
+
+tick mark
+true
+0
+Rectangle -7500403 true true 135 150 165 300
 
 tiny dot
 true
