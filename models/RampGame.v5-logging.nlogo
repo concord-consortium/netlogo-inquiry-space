@@ -1,5 +1,5 @@
-; RampGame v5e
-; Jan 11, 2014
+; RampGame v5f
+; Jan 16, 2014
 ; Started July 22, 2013
 ; Based on SuperRamp
 ; Bob Tinker
@@ -1187,13 +1187,13 @@ to get-next-step    ; determines whether the student stays at this step, goes up
          set next-step 1 set next-level level + 1
          stop]
        if next-level >= max-level [          ; if the student is on the last level, keep at the highest step.  ; 
-         set next-level 5 set next-step n-steps
+         set next-level max-level set next-step n-steps 
          if first-reward? [     ; say the following once only. More razmataz would be good.  
            clear-output         ; overwrite previous message
            pretty-print (word "Incredible!! You have completed the hardest challenge. You are a winner." )
            pretty-print "You can contine to earn points in this challenge, but first, jot down what you learned in your lab notebook."
            set first-reward? false
-           set freeze? true]  ; freeze the game
+           set freeze? true]  ; freeze the game for a while
        ]]      ; if the student is on the last level, keep at the highest step.  ; 
      stop]
    
@@ -1313,7 +1313,7 @@ to setup-game-level ; setup the game for the current level.
     set air-friction-locked? true
     set ramp-locked? true
     set vehicle-locked? true
-    set n-steps  8
+    set n-steps 6
     set starting-position-max -.52
     set starting-position-min -.52
     set target-radius-max .5 ; the distance between the center and edge of the target for step 1
@@ -1542,7 +1542,7 @@ to setup-data-export
     [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
-    [ "ramp" "RampGame.v5e.nlogo" "Jan-12-2014" ] ]
+    [ "ramp" "RampGame.v5f.nlogo" "Jan-16-2014" ] ]
   let time-series-data [
 ;    [ "Time" "s" 0 0.1 ]           ; Check
 ;    [ "Distance" "m" 0 0.6 ]
