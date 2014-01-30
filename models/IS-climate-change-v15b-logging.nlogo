@@ -559,9 +559,9 @@ to setup-data-export
   let time-series-data [
     [ "Year" "" 2014 2114 true ]
     [ "Yearly Temp." "°C" -100 200 true ]
-    [ "10-year Avg. Temp." "°C" -100 200 true]
+    [ "10yr Avg. Temp." "°C" -100 200 true]
   ]
-  let setup (list computational-inputs representational-inputs computational-outputs student-inputs model-information time-series-data)
+  let setup (list computational-outputs computational-inputs representational-inputs student-inputs model-information time-series-data)
   data-export:initialize setup
 end
 
@@ -577,13 +577,13 @@ to update-run-series
   let representational-inputs []
   let computational-outputs   ( list round year precision temperature 1 precision smooth-temperature 1 )
   let student-inputs          []
-  let run-series-data ( list computational-inputs representational-inputs computational-outputs student-inputs )
+  let run-series-data ( list computational-outputs computational-inputs representational-inputs student-inputs )
   data-export:update-run-series run-series-data
   data-export:log-event "User exported the model." (create-run-parameter-list) "" ""
 end
 
 to-report create-run-parameter-list
-  report (list CO2-level sun-brightness albedo cloud-amount round year precision temperature 1 precision smooth-temperature 1)
+  report (list round year precision temperature 1 precision smooth-temperature 1 CO2-level sun-brightness albedo cloud-amount)
 end
 
 
