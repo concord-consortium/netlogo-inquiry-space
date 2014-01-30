@@ -1,0 +1,18 @@
+{
+  "model": {
+    "modelType": "netlogo-applet",
+    "url": "models/IS-climate-change-v15b-logging.nlogo",
+    "viewOptions": {
+      "dimensions": {
+        "width": 885,
+        "height": 505
+      },
+      "appletDimensions": {
+        "width": 860,
+        "height": 484
+      }
+    }
+  },
+  "components": [
+  ]
+}
