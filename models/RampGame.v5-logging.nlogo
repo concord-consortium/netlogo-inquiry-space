@@ -1,56 +1,42 @@
-; RampGame v5f
-; Jan 16, 2014
+; RampGame v6
+; Feb 1, 2014
 ; Started July 22, 2013
-; Based on SuperRamp
 ; Bob Tinker
 ; Copyright, the Concord Consortium
 
 ; This version is set up to log data
+; It is a stripped down version of v5, with vast amounts of unneeded code and logic removed. 
 
 __includes [ "data-export-modular.nls" ]
 
 globals [
-  focus old-focus                ; focus contains the number of the current window
-  old-mouse-down? 
-  helper-who                     ; the who of the help button
   messages-shown                 ; counts the number of messages shown at each level
-  output-width
-  ; define the windows. Each of the following is a LIST
-  u-wind-lt u-wind-rt v-wind-bot v-wind-top  
-  mx bx my by                    ; LISTS of transformation coefs
-  ul ur vb vt                    ; the window boundaries of the focus window
+  output-width                   ; the width of the output box--used in pretty-print
+  mx bx my by                    ; transformation coefs for the equations: x=mx*u + bx y=my*v + by
+                                 ; x,y are used for problem coordinates, u,v for screen
+  ul ur vb vt                    ; the ramp window boundaries
 
-  mxx bxx myy byy                ; the transformation coef for the focus window
-  n-wind                         ; the number of windows
-  starting? 
+  starting?                      ; true when waiting for the user to press the start button
   running?                       ; true when the car is running
   ready-for-export? 
-  old-x-center
-  old-y-center
-  old-magnification
-  old-vehicle-loc
+  old-car-loc
   old-running?
-  ramp max-y-ramp min-y-ramp
-  selected-ramp-index
+  ramp 
   ramp-color
-  mass
-  vehicle-colors
-  vehicle-shapes
-  vehicle-masses
-  vehicle-starts
-  vehicle-offsets
-  vehicle-sizes
-  vehicle-locked?
+  car-color
+  car-shape
+  car-mass
+  car-offset
+  car-size
+  car-x                           ; the horizontal location of the car in problem units
+  car-y                           ; the vertical location of the car in problem units. 
+  car-speed
+  car-locked?
   freeze?   ; used to freeze the game to push kids to use the lab notebook. 
-  move-ramp-left?   ; set true when the vehicle runs off one side or the other
-  move-ramp-right?
-  v-who          ; a list of the whos of visible vehicles
-  selected-vehicle    ; the who of the vehicle the user clicked on--accurate only if click=2
-  blinking?         ; tells whether vehicle selected-vehicle should blink
-                 ; when blinking, the selected vehicle's parameters can be set in the graphing area. 
-  old-blinking?     ; used to detect a change in blinking status to insure that the old blinking vehicle is left on
-  magnification 
-  y-axis
+;  move-ramp-left?   ; set true when the car runs off one side or the other
+;  move-ramp-right?
+;  y-axis
+;  old-y-axis
   g        ; acceleration of gravity 9.81 m/s^2
   time     ; the model time
   dt       ; the time step
@@ -60,41 +46,20 @@ globals [
   saved-starting-x
   data-saved?
   
-  snap               ; used in snap to zero--the radius that causes the snap
-  click              ; indicates the response required after a mouse click. 
-                     ; zero means none, 1 means a ramp handle
-                     ; two means the vehicle, 3 means drag the ramp
-  u-click v-click    ; the u,v coordinates of the background where the mouse clicked
-  x-center y-center  ; the location of the center of the window 1 screen in x,y coordinates
-  old-y-axis
-  run-number
-  Dist-from-zero
-  
-  grid-umax grid-umin  ; the boundaries of the graphing grid in window 2
-  grid-vmax grid-vmin
-  edge edge+  ; the distance between the window and the grid in screen units 
-  grid-xmin grid-xmax grid-xlabel
-  grid-ymin grid-ymax grid-ylabel
-  grid-color grid-label-color
-  grid-separation       ; target number of pixels per grid line
-  tic-length            ; number of pixels the tic extends beyond the axis
-  line-width            ; width of lines in the grid.
-  
+  x-center y-center  ; the location of the center of the window screen (u=0, v=0) in x,y coordinates
+  magnification      ; the ratio of pixels to meters
+
+  ; game variables
   total-score           ; score since the beginning
   score-last-run        ; score earned in the last run
   level                 ; the current level (the user knows the levels as 'challenges')
   step                  ; the current step in the current level
-  loops-at-zero  ; the number of times go is called when speed is zero before the program stops
-  countdown ; used to record the times waited, starting at loops-at-zero
-  
-  ; game variables
+  loops-at-zero         ; the number of times go is called when speed is zero before the program stops
+  countdown             ; used to record the times waited, starting at loops-at-zero  
   instructions            ; text 
   number-of-hints
   friction-locked?
-  air-friction-locked?
   starting-position-locked?
-  ramp-locked? 
-  old-air-friction
   old-friction
   old-starting-position
   starting-position-min ; the smallest starting position allowed (a negative value)
@@ -107,7 +72,7 @@ globals [
   target-radius         ; the radius for this level and step
   target-max            ; the maximum position of the target 
   target-min            ; the minimum position of the target
-  max-level   ; the number of levels in the game
+  max-level             ; the number of levels in the game
   marker-1              ; the who of the left-hand marker of the target range
   marker-2              ; the who of the right-hand marker
   marker-3              ; the who of the target center indicator
@@ -116,24 +81,14 @@ globals [
   final-position        ; the final position of the car at the end of a run
   next-step             ; used to carry the step info from the time it is set in analyze data to its display in setup-next-run
   next-level            ; ditto for level
-  number-of-random-tries   ; used to detect whether a student is making random tries
-  first-reward?          ; used so that the congratulations for finishing occurs only once. 
-
+  number-of-random-tries; used to detect whether a student is making random tries
+  first-reward?         ; used so that the congratulations for finishing occurs only once. 
 ]
 
 breed [drawing-dots drawing-dot]      ; used for the track
-breed [grid-dots grid-dot]            ; used for drawing the graphing grid. 
-breed [graph-dots graph-dot]          ; used for graphs
-breed [vehicles vehicle]
-breed [buttons button]
 breed [readers reader]                ; used for read-out at the cursor
 breed [markers marker]                ; used to show the target
-breed [helpers helper]                ; used to implement the help button
-
-vehicles-own [x-val y-val speed frict my-mass offset size-100 spring-left? spring-right?]       ; x-val y-val are the x,y locations. 
-graph-dots-own [run-num x-val y-val speed momentum Potential Kinetic]                     ; these store everything that they need for any graph type
-buttons-own [default-shape pressed-shape command pressed? short-name long-name]   ; soft buttons. When pressed, the command is executed. 
-markers-own [x-val y-val]       ; these markers might be off-screen, so their physical space location is stored in x-val y-val
+breed [cars car]
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;; End of preliminaries ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -150,81 +105,28 @@ to startup  ; structured this way in order to have a start page
   set waiting-for-setup? false
 end
 
-to go              ; this is the main forever button
-  if starting? [
-    ask drawing-dots [die]  ;gets rid of the startup message
-    initialize
+to go                       ; this is the main forever button
+  if starting? [            ; starting? is true only on startup
+    ask drawing-dots [die]  ; gets rid of the startup message
     set starting? false
-    reset-timer]
-  if running? [
-    run-vehicles  ; computes the motion of the vehicles
-    every .02 [update-displays]]
-  every .1 [   ; do the following every tenth second
-    act-on-changes
-    support-mouse]   ; maintains the action step, sets parameters, handles the screen, shows score, etc 
-  tick
+    initialize]             ; initialize all the variables, setup the initial view
+  every dt [
+    if running? [run-car]]  ; computes the motion of the cars every dt seconds, if the simulation is running
+  every .1 [                ; do the following every tenth second
+    act-on-changes          ; detect changes in the friction slider
+    support-mouse           ; allows the mouse to move the car
+    tick]
 end
 
-to update-displays
-  ; also updates the exported time-series
-  if running? [  ; draw a dot on the graph for the vehicle
-    let w first v-who ; v-who is a relic of a multi-vehicle version of this program
-    let c [color] of vehicle w ; color of this vehicle
-    set dist-from-zero precision ([x-val] of vehicle w )  2 ; the location of this vehicle
-    set height precision ([y-val] of vehicle w) 2
-    place-point time dist-from-zero c 
-    let s precision ([speed] of vehicle w) 2
-    let point (list time dist-from-zero height s )
-;    update-data-series point 
-]
-end
-
-
-to-report uv-of-vehicle ; in vehicle context, reports the screen coordinates [u v] of that vehicle
-  ; also sets the heading of the vehicle and its y-val
-  switch-focus-to 1  
-  let disp offset * .01 * magnification
-  let u mxx * x-val + bxx
-  let info vehicle-info ramp x-val
-  let y first info 
-  set y-val y
-  set height y
-  let v myy * y + byy
-  set heading (last info) - 90
-  set disp disp / cos heading
-  report list u (v + disp)
-end
-
-to place-vehicle [x]  ; in vehicle contexts, puts the vehicle on the track 
-  let mult 1 if level = 4 [set mult 1.4]                 ; enlarge car in level 4
-  set size size-100 * .01 * mult * magnification
-  set x-val x     ; update the vehicle variable x-val
-  set dist-from-zero x
-  let loc uv-of-vehicle       ; get the [u v] coordinates of the vehicle and set its heading
-  let u first loc let v last loc
-  ifelse in-wind? u v
-    [st setxy u v]
-    [ht]
-end
 
 to act-on-changes
   if freeze? [wait 5 set freeze? false]      ; freezes the game for 5 sec. 
-  if magnification != old-magnification [ 
-    draw-ramp 
-    set old-magnification magnification ]
-  if y-axis != old-y-axis [
-    update-y-axis 
-    draw-grid
-    set old-y-axis y-axis ]
-  if move-ramp-left? or move-ramp-right? [draw-ramp]
-  
-  if friction != old-friction [          ; if the user tries to change the friction...
+  if friction != old-friction [              ; if the user tries to change the friction...
     ifelse friction-locked? or running?      ;   and the friction slider is supposed to be locked or the model is running
       [ wait .6 set friction old-friction 
         user-message "The friction is locked for this challenge."
-        set friction old-friction  ]       ;   then reset the slider to its old position
-      [set old-friction friction]]       ; otherwise allow the change
-
+        set friction old-friction  ]         ;   then reset the slider to its old position
+      [set old-friction friction]]           ; otherwise allow the change
 end
 
 to draw-first-page
@@ -243,80 +145,46 @@ end
 to initialize
   set ready-for-export? false
   set waiting-for-start? true
-  set freeze? false
-  set magnification 100
-  set n-wind 3    ; three windows
-  set old-focus 0 ; zero stands for no focus
-  set old-mouse-down? false
-  set snap .05
-  set magnification 100
-  set old-magnification magnification
-  set g 9.81 ; acceleration of gravity
-  set dt .00004 ; the time step
-  set x-center 1.34 set y-center .6
   set running? false
   set old-running? false
-  set blinking? false
-  set old-blinking? false
-  set run-number -1
-  set mx [0 0 0] set my mx ; initialize these three as list of three
-  set bx mx set by my      ; they will be used to hold the transformation coefs    
-  define-windows
-  define-transforms  ; actually only creates transforms for window 1
-                     ; draw-grid calculates the transformations for window 2 
-                     ; and places them in mx, bx, my, by
-  ; now set the default grid values and draw the grid in window 2
-  set-boundaries-for 2 set focus 2  ; the graphing window
-  set edge 10 set edge+ 25  
-  set grid-umin ul + 1.8 * edge+ 
-  set grid-umax ur - edge
-  set grid-vmin vb + edge+
-  set grid-vmax vt - 1.5 * edge
-  set grid-separation 30    ; the approximate number of pixels per grid line
-  set grid-xmin 0   set grid-xmax 4 set grid-xlabel "Time (s)"
-  set grid-ymin -2 set grid-ymax 5  set grid-ylabel "Distance (m)"
-  set y-axis grid-ylabel  ; this is the pull-down in the UI
-  set grid-color blue + 3 set grid-label-color blue - 1
-  set tic-length 5   ; the distance a tic mark extends beyond the axis
-  set line-width 1    ; the thin lines that make up the grid
-  draw-grid  ; creates the grid. It will change graph-xmin etc and the transformation coefs for the focus window 
- 
-  switch-focus-to 1
-  create-help-button
-
+  set freeze? false
+  set magnification 50    ; 
+  
+  set g 9.81 ; acceleration of gravity
+  set dt .001 ; the time step
+  set x-center 1.34 set y-center .3  ; 
+  define-window      ; defines the ramp window bounded by (ul, ur, vb, bt)
+  define-transforms  ; creates transforms for the ramp  (mx, my, bx, by)
   set first-reward? true
   set ramp-color blue + 2
-  set ramp [[-1.3 1][0 0][.5 0][1 0][1.5 0][2 0][2.5 0][3 0][3.5 0][4 0][5 0]] ; the initial ramp
-
-  set move-ramp-left? false
-  set move-ramp-right? false
-  draw-ramp ; draws ramp
-  set selected-ramp-index false ; this is the index of the pair in ramp that the mouse has selected and drags
-  ; define six possible vehicles
-  set vehicle-colors (list cyan green 44 blue magenta orange)
-  set vehicle-shapes [ "car" "truck" "bus" "engine" "ball" "ambulance"] 
-  set vehicle-masses [ .1 .5 .5 2 .02 .3]
-  set vehicle-starts [ -1 1.5 2 3 4 -.5]
-  set vehicle-offsets [9 8 10 13 6 9  ]  ; distance the turtle center is above the ramp for magnification of 100
-  set vehicle-sizes [20 28 33 30 10 30 ]    ; the size of the turtle for magnification of 100
+  set ramp [[-1.3 1][0 0][.5 0][1 0][1.5 0][2 0][2.5 0][3 0][3.5 0][4 0][5 0]] ; the ramp, defined by x,y coordinates
+  draw-ramp                      ; draws ramp
+  ; define car variables
+  set car-offset 12  ; distance the turtle center is above the ramp for magnification of 100
   set saved-starting-x -1
-  set v-who []  ; initialize to zero vehicles, then add one
-  add-vehicle
-  create-readers 1 [ht set label-color black
-    set size .1 set shape "dot" ]  ; used for read-out at the cursor in window 2
-  ; markers mark the target. They are two arrowheads linked by a thick line
+  ;  make the car
+  set car-size 22
+  create-cars 1 [
+    ht  
+    ifelse level = 4 [set car-mass 200] [set car-mass 100]
+    set color red
+    set shape "car"
+    set size car-size
+    place-car saved-starting-x]
+
+  ; markers mark the target. They are two tiny turtles linked by a thick line
   create-markers 1 [ht set marker-1 who set color red set size .1 set heading 0]
   create-markers 1 [ht set marker-2 who set color red set size .1 set heading 0
     create-link-with marker marker-1 [
-      set thickness 6 set color red]]
-  create-markers 1 [ht set marker-3 who set color red set size 20 set heading 0 set shape "line"]    ; create a square dot at the center of the target
+      set thickness 3 set color red]]
+  create-markers 1 [ht set marker-3 who set color red set size 18 set heading 0 set shape "line"]    ; create a vertical line at the center of the target
   set data-saved? true
-  set output-width  48     ; characters in the output box, used with pretty-print
+  set output-width  46     ; characters in the output box, used with pretty-print
   set total-score 0
   set score-last-run 0
   set messages-shown [0 0 0 0 0 0 ] ; initializes the number of help messages already shown to the student, by level
 
-  set loops-at-zero 10000
+  set loops-at-zero int ( .3 / dt)  ; wait .3 sec before deciding that the car has stopped. 
   set countdown loops-at-zero
   set number-of-random-tries 0
   set level 1       ; start at level 1 (subsequently, levels were renamed as challenges. 
@@ -327,420 +195,203 @@ to initialize
   setup-game        ; setup for level 1 step 1
   show-target
   clear-output
-  pretty-print "Challenge 1: Make the car stop in the middle of the red zone. You can drag the car to your desired starting position."
+  pretty-print "Challenge 1: Make the car stop in the middle of the red zone. Place the car on the ramp by clicking on it and dragging it."
   pretty-print "As you get better, the red target will get smaller."
   setup-data-export    ;;; used to define the structure of the exported data
   setup-new-run
-  tick
+  reset-ticks
+  reset-timer
 end
 
-to create-help-button
-  ask helpers [die]
-  create-helpers 1 [      ; draw the button
-    set helper-who who
-    set shape "button" set color lime
-    setxy max-pxcor - 40 max-pycor - 25
-    set heading 0
-    set size 75 ]
-  create-helpers 1 [ 
-    set shape "dot" 
-    set color lime set size 1
-    setxy max-pxcor - 26 max-pycor - 26
-    set label "HINT" set label-color black
-    set heading 0 ]
+to define-window
+  ; declare the location of the ramp window
+  set ul min-pxcor + 2
+  set ur max-pxcor - 2
+  set vb 0
+  set vt max-pycor - 2
 end
 
-to-report on-button
-  report mouse-xcor > max-pxcor - 72 and
-         mouse-ycor > max-pycor - 45
-end
-    
-
-to-report in-grid? [u v] 
-  report u >= grid-umin and u <= grid-umax and v >= grid-vmin and v <= grid-vmax
-end
-
-to define-windows  
-  ; declare the locations of the windows
-  ; one large one (number 1)  on top for the ramps, 
-  ; a smaller one on the lower right for graphs (number 2)
-  ; and a very small one on the lower left for soft buttons or messages (number 3)
-  let v-top-bot 40 ; the location of the divider between top and bottom
-  let u-lt-rt .36 * min-pxcor ; the location of the divider between the two lower windows
-  let buf 4  ; the buffer between windows. 
-  let buf2 .5 * buf  ; half the buffer
-  ; make a list of edges for each window, where window 1 is item 0
-  set u-wind-lt (list (min-pxcor + buf))
-  set u-wind-rt (list (max-pxcor - buf))
-  set v-wind-bot (list (v-top-bot + buf2))
-  set v-wind-top (list (max-pycor - buf))
-  set u-wind-lt lput (u-lt-rt + buf2) u-wind-lt
-  set u-wind-rt lput (max-pxcor - buf) u-wind-rt
-  set v-wind-bot lput (min-pycor + buf) v-wind-bot
-  set v-wind-top lput (v-top-bot - buf2) v-wind-top
-  set u-wind-lt lput (min-pxcor + buf) u-wind-lt
-  set u-wind-rt lput (u-lt-rt - buf2) u-wind-rt
-  set v-wind-bot lput (min-pycor + buf) v-wind-bot
-  set v-wind-top lput (v-top-bot - buf2) v-wind-top
-  ask patches [
-    set-boundaries-for 1
-    if in-wind? pxcor pycor [set pcolor yellow + 4.5 stop]
-;    set-boundaries-for 2
-;    if in-wind? pxcor pycor [set pcolor blue   + 4.5]  
-;    set-boundaries-for 3
-;    if in-wind? pxcor pycor [set pcolor lime   + 4.5]
-  ]
-  set focus 0
+to-report in-window? [u v]
+  report ul < u and u < ur and vb < v and v < vt
 end
   
-to define-transforms    ; calculates m and b as in u=mx+b for window 1
-  ; get transforms for window 1--note these can change during a run
-  let u-center (first u-wind-lt  + first u-wind-rt ) / 2  ; calculate the u,v coordinates for the center of window 1
-  let v-center (first v-wind-bot + first v-wind-top) / 2
-  set mx replace-item 0 mx magnification
-  set my replace-item 0 my magnification
-  set bx replace-item 0 bx (u-center - x-center *  magnification)
-  set by replace-item 0 by (v-center - y-center * magnification)
-end
-
-to draw-ramp
-  if move-ramp-left? [               ; flag set by an object going off to the right
-    set x-center x-center - 500 / magnification
-    set move-ramp-left? false ]
-  if move-ramp-right? [              ; flag set by an object going off to the leaft
-    set x-center x-center + 500 / magnification 
-    set move-ramp-right? false ]
-  define-transforms   ; reads magnification and location and computes x->u y->v transformations
-  set-transforms-for 1  ; updates the transforms
-  ask drawing-dots [die]       ;erase prior ramp
-  draw-plc ramp ramp-color magnification / 20         ;draw the ramp 
-  ask vehicles [
-    place-vehicle x-val ; relocate vehicles on ramp
-    ]      
+to define-transforms    ; calculates m and b as in u=mx*x+bx v=my*y + by  
+  let u-center (ul + ur) / 2
+  let v-center (vb + vt) / 2
+  set mx magnification
+  set my magnification
+  set bx (u-center - x-center * magnification)
+  set by (v-center - y-center * magnification)
 end
 
 to support-mouse
-  if not mouse-inside? [stop]   ; do nothing if the mouse is outside the view
-;  set focus mouse-in-window    ; w contains the current window of the mouse
-  if 2 = mouse-in-window [read-cursor-location]
-  ifelse mouse-down? and not old-mouse-down? 
-    [handle-mouse-click set old-mouse-down? true ]
-    [ifelse not mouse-down? and old-mouse-down? 
-      [handle-mouse-unclick set old-mouse-down? false ]
-      [if mouse-down? and old-mouse-down? [handle-mouse-drag]]]
-end  
-
-to switch-focus-to [i]  ; sets the boundaries and transformation coefs for the current window
-  if i = 0 or i > n-wind [stop]       ; do nothing if the focus is on window zero
-  set focus i
-  set-boundaries-for i
-  set-transforms-for i
+  if not in-window? mouse-xcor mouse-ycor [stop] ; do nothing if the mouse is outside the ramp window
+  if car-locked? [stop]                          ; if the car is locked, do nothing
+    ; set car-x to the transform of the mouse's xcor, set car-y to be on the ramp for that x value
+  if mouse-down? [ask cars [
+      place-car ((mouse-xcor - bx) / mx)] ]       ; place the car on the track at the mouse x-coordinate
 end
 
-to set-transforms-for [i]
-  let j i - 1
-  set mxx item j mx         ; extract the transformation coefs
-  set myy item j my
-  set bxx item j bx 
-  set byy item j by
-end
-
-to set-boundaries-for [i]
-  let j i - 1
-  set ul item j u-wind-lt   ; extract the window boundaries 
-  set ur item j u-wind-rt
-  set vt item j v-wind-top
-  set vb item j v-wind-bot 
-end
-
-to handle-mouse-click
-  switch-focus-to 1
-  ; this is called only once per mouse click
-  ; first check for a click in the help button area 
-  if on-button [
-    ask helper helper-who [set color grey ]
-    display-help-message
-    ask helper helper-who [set color lime ] 
-    stop]   
-  ; identify ramp coordinates near the mouse, if any
-  let radius .1 * magnification
-  if not ramp-locked? [
-    set click 0          ; click informs the software of what kind of click was made. zero indicates none
-    set selected-ramp-index false   ; this will be the index in ramp of the mouse is near
-
-    let p []
-    ask drawing-dots with [color = black][       ; run through the current black drawing dots to find one near the mouse
-      if abs (xcor - mouse-xcor) < radius and abs (ycor - mouse-ycor) < radius [
-        set click 1 
-        ; find the index of the dot in ramp that produced this dot
-        let x (xcor - bxx) / mxx  ; find the x,y coordinates of this point
-        let y (ycor - byy) / myy
-        set p list x y
-        ; ramp is a list of endpoints of the ramp in x,y space
-        set selected-ramp-index position p ramp ]]  ; finds [x y] in ramp, sets the index selected-ramp-index to its position
-    if click = 1 [stop] ]
-  
-                                ; check all vehicles for one near the mouse
-  if (not running?) and (not empty? v-who) [         ; skip if there are no vehicles or if the model is running
-    let i 0                     ; v-who contains a list of the whos of current vehicles
-    while [i < length v-who] [  ; check each vehicle
-      let w item i v-who
-      ask vehicle w [  
-        if abs (xcor - mouse-xcor) < radius and abs (ycor - mouse-ycor) < radius [  ; look for a click near the vehicle
-          set click 2 set speed 0 ; if a vehicle is clicked, zero its speed 
-          set running? false    ; if a vehicle is clicked, the simulation is not running 
-          set selected-vehicle w]]
-      set i i + 1]] 
-  if click = 2 [stop]           ; if click = 2 a vehicle has been selected, and its who is selected vehicle
-  
-;  set u-click mouse-xcor  ; save the u,v coordinates of the mouse
-;  set v-click mouse-ycor 
-;  if in-wind? u-click v-click [
-;    set click 3 ; must be a background click
-;    set old-x-center x-center ; find the x,y coordinates of this point
-;    set old-y-center y-center]
-end
-
-to handle-mouse-unclick
-  set click 0  ; indicate that the mouse is no longer dragging anything 
-end
-
-to handle-mouse-drag
-  if click = 0 [stop]  ; click determines the kind of object being dragged 0: none, 1: ramp, 2: vehicle, 3: background
-  if click = 2 and vehicle-locked? [stop]
-  ; called continuously as long as the mouse remains down
-  if click = 1 and selected-ramp-index != false [    ; if a handle on the ramp has been previously selected
-    if not in-wind? mouse-xcor mouse-ycor [stop] ; dont move the mouse outside the window
-    let i selected-ramp-index            ; update ramp with the current location of the mouse but keep ramp in ascending x order
-    if i = 1 [stop] ; don't move the bottom of the ramp, which is item 1 of rampa
-    let x (mouse-xcor - bxx) / mxx       ; this will be the new x value if it is not out of order
-    if abs (x) < snap [set x 0]          ; snap to zero
-    let ok-to-move? false                ; turns true below if the ramp will be in ascending x order
-    if i = 0 [                           ; if the moved point is on the left end
-      let x1 first item 1 ramp           ; check the x-value of the second point
-      if x <= x1 [set ok-to-move? true]] ; if that is not to the left of the new point it is ok to move 
-    let max-i (length ramp) - 1          ; the maximum index i is one less than the number of x,y pairs in ramp
-    if i = max-i [                       ; if the moved point is at the lend of the ramp list
-      let x0 first item (max-i - 1) ramp ; find the x-value of the next-to-last pair in ramp
-      if x0 <= x [set ok-to-move? true]] ; if this x-value is not greater than the new value, it is ok to move. 
-    if i > 0 and i < max-i [             ; now check the cases for which the new point is not at either end
-      let x0 first item (i - 1) ramp     ; get the x-value of the preceeding point
-      let x1 first item (i + 1) ramp     ; and the x-value of the next point
-      if x >= x0 and x <= x1 [set ok-to-move? true]]    ; if x falls between them, it is ok to move
-    if ok-to-move? [
-      let y (mouse-ycor - byy) / myy 
-      if abs(y) < snap [set y 0]          ; snap to zero
-      let p list x y  ; p is the [x,y] location of the mouse
-      set ramp replace-item i ramp p ; replace item i of ramp with p, where i is selected-ramp-index
-      draw-ramp ]]        ; now redraw the ramp
-  if click = 2 and not running? [
-    ask vehicle selected-vehicle [
-      place-vehicle ((mouse-xcor - bxx) / mxx)]  ; place the vehicle on the track at the mouse x-coordinate
-    set blinking? true
-    stop ]
-  if click = 3 [       ; drag the x-center but not the y-center 
-    set x-center old-x-center - (mouse-xcor - u-click) / mxx
-;    set y-center old-y-center - (mouse-ycor - v-click) / myy
-    draw-ramp ]        ; uses the current x-center y-center and magnification to draw the ramp and vehiclee
-end
-
-to-report in-wind? [u v]  ; reports true if u,v is inside the focus window
-  ; assumes that the focus is on the window to be tested
-  report u >= ul and u <= ur and 
-         v >= vb and v <= vt 
-end
-
-to-report mouse-in-window       ; reports which window the mouse is currently inside
-  let u mouse-xcor let v mouse-ycor
-  set-boundaries-for 1             ; switch focus in order to test
-  if in-wind? u v [             ; in-wind? tests the focus window
-    report 1] ; reset the focus and report 
-  set-boundaries-for 2 
-  if in-wind? u v [
-    report 2]
-  set-boundaries-for 3 
-  if in-wind? u v [
-    report 3]
-  report 0
-end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;  Draw a ramp (or anything else) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;  Draw the ramp ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to draw-plc [object c w]   ; plc stands for piecewise linear continuous line
-  ; shape is a list of lists of x,y pairs
-  ; the object is drawn using drawing-dots
+to draw-ramp
+;  ask drawing-dots [die]                   ; erase any prior ramp 
+  let object ramp                           ; object is a working version of ramp, a list of lists of x,y pairs 
+  ; the ramp is drawn using drawing-dots
   let pair-zero []
-  if not empty? object [     ; pull off the first point
+  if not empty? object [                    ; pull off the first point
     set pair-zero first object
     set object bf object ]
-  while [not empty? object][      
+  while [not empty? object][                ; repeat as long as there is a pair in object
     let pair-one first object
     set object bf object
-    draw-segment pair-zero pair-one c w
+    connect pair-zero pair-one ramp-color magnification / 20 ; draw a line between pair-zero and pair-one
     set pair-zero pair-one ]
 end
-  
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;  Draw with clipping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-to draw-segment [p0 p1 c w] ; draw a segment in the current window that connects p0 ([x0 y0]) to p1 ([x1 y1]) with clipping
-  ; the line color is c and width is w. The drawing uses drawing-dots
-  ; assumes that the focus is on the window where this line is to be drawn
-  ; note: the following are global ul (the u-coord of the left edge), ur, vb (the v-coordinate of the bottom), and vt
-  ;       the following are local, not global: vl, vr, ub, and ut
-  ; updates 'latest-segment' with the a list of the who of the two endpoints or an empty list if nothing is drawn
-  
-  if last p0 = 0 and last p1 = 0 [set c gray + 3]     ; the ramp is gray if it on the floor, where y0=y1=0
-  
-  set uL first u-wind-lt 
-  set uR first u-wind-rt 
-  set vB first v-wind-bot 
-  set vT first v-wind-top
-  
-  let u0 mxx * first p0 + bxx ; convert to screen coordinates
-  let v0 myy * last p0 + byy
-  let u1 mxx * first p1 + bxx
-  let v1 myy * last p1 + byy
-  let zero-in? in-wind? u0 v0  ; is point x0,y0 inside the window? 
-  let one-in?  in-wind? u1 v1  ; is point x1,y1 inside?
-  if zero-in? and one-in? [    ; if both are inside, connect them
-    connect u0 v0 u1 v1 c w stop]
-  if u0 = u1 and v0 = v1 [stop]        ; if the two points are identical, ignore
-  if (u0 >= ur and u1 >= ur) or (u0 <= ul and u1 <= ul) or     ; if they are both left or right 
-    (v0 >= vt and v1 >= vt) or (v0 <= vb and v1 <= vb) [stop]   ; or both above or below, do nothing. 
-    
-  if not zero-in? and one-in? [        ; if point zero is not inside and p1 is, swap the p0 and p1 so p0 is inside
-    let t u0 set u0 u1 set u1 t        ; this insures that point zero is inside if either is
-    set t v0 set v0 v1 set v1 t
-    set zero-in? in-wind? u0 v0
-    set one-in?  in-wind? u1 v1]       ; also update these logicals
-  
-  ; now consider vertical and horizontal lines
-  ; describe the line between the points parametrically, vis: u = u0 + t*(u1 - u0) and v = v0 + t*(v1 - v0) for 0<=t<=1
-  let points []                       ; points will contain point pairs that intersect the edge between p0 and p1 if any
-  if u0 = u1 or v0 = v1 [
-    if u0 = u1 [                        ; Look at the case of a vertical line that can result in divide-by-zero error
-      let tT (vT - v0) / (v1 - v0)      ;   tT is the value of t at the intersection with u=ut on the top 
-      if 0 <= tT and tT <= 1 [          ; Is this a good point?
-        set points lput list u0 vT points]     ; If so, save the coordinates of the intersection
-      let tB (vB - v0) / (v1 - v0)      ; tB is the value of t at the intersection with the bottom
-      if 0 <= tB and tB <= 1 [          ; Is this a good point?
-        set points lput list u0 vB points]]    ; If so, save the coordinates of the intersection
-  
-    if v0 = v1 [                        ; Look at the case of a horizontal line 
-      let tL (uL - u0) / (u1 - u0)      ;   tL is the value of t at the intersection with v=vL on the left
-      if 0 <= tL and tL <= 1 [          ; This is a good point
-      set points lput list uL v0 points]
-      let tr (ur - u0) / (u1 - u0)
-      if 0 <= tr and tr <= 1 [
-        set points lput list ur v0 points]]
-    
-    if length points = 0 [stop]       ; no points in the window (should be impossible)
-    if length points = 1 [
-      connect u0 v0 (first first points) (last first points) c w stop] ; connect p0 to the single good point
-      ; the only possiblity remaining is that there are two points outside the window on opposite sides
-    connect (first first points) (last first points) (first last points) (last last points) c w stop 
-  ] ; end of horizontal and vertical lines
-
-  ; Now consider sloping lines
-
-
-  if zero-in? and not one-in? [        ; point zero is inside but point 1 is outside
-  ; find the crossing of the line with one of the four edges and draw a line from u0 v0 to that point
-  ; Again, use a parametric equation for the line: u = u0 + t*(u1-u0) and v = v0 + t*(v1-v0)  where 0 <= t <= 1
-  let tR (uR - u0) / (u1 - u0)
-  if tR >= 0 and tR <= 1 [             ; this is a good point, one on the right edge betwen p0 and p1
-    let vR v0 + tR * (v1 - v0)
-    connect u0 v0 uR vR c w stop]      ; draw from p0 to the right edge and leave
-  let tL (uL - u0) / (u1 - u0)
-  if tL >= 0 and tL <= 1 [             ; this is a good point on the left
-    let vL v0 + tL * (v1 - v0)
-    connect u0 v0 uL vL c w stop]      ; draw from p0 to the left edge and leave
-  let tT (vT - v0) / (v1 - v0)
-  if tT >= 0 and tT <= 1 [             ; a good point on the top
-    let uT u0 + tT * (u1 - u0)
-    connect u0 v0 uT vT c w stop]
-  let tB (vB - v0) / (v1 - v0) 
-  if tB >= 0 and tB <= 1 [             ; a good point on the bottom
-    let uB u0 + tB * (u1 - u0) 
-    connect u0 v0 uB vB c w stop]]
-
-  ; here, the only possibility is that both points are outside the viewing area but might intercept with it
-  set points []
-  ; points will contain a list of list of pairs of "good" window edge intersections (ones between p0 and p1)
-  ; Use a parametric equation for the line: u = u0 + t*(u1-u0) and v = v0 + t*(v1-v0)  where 0 <= t <= 1
-  let tr (ur - u0) / (u1 - u0)
-  if tr >= 0 and tr <= 1 [             ; this is a good point, one on the right edge betwen p0 and p1
-    let vr v0 + tr * (v1 - v0)
-    set points lput list ur vr points] ; put the ur,vr pair in the list points ;
-  let tl (ul - u0) / (u1 - u0)
-  if tl >= 0 and tl <= 1 [             ; this is a good point on the left
-    let vl v0 + tl * (v1 - v0)
-    set points lput list ul vl points] ; add this pair to the list points
-  let tt (vt - v0) / (v1 - v0)
-  if tt >= 0 and tt <= 1 [             ; a good point on the top
-    let ut u0 + tt * (u1 - u0)
-    set points lput list ut vt points] ; add it to the list points
-  let tb (vb - v0) / (v1 - v0) 
-  if tb >= 0 and tb <= 1 [             ; a good point on the bottom
-    let ub u0 + tb * (u1 - u0)
-    set points lput list ub vb points] ; add it to the list points
-  
-  ; here, points should consist of zero or two pairs of points
-  if empty? points [stop ]      ; escape without drawing anything--the line between p0 and p1 never intersects the view
-  if length points = 2 [        ; this better be always true here, but it is included just in case
-    let u2 first first points   ; here the line between p0 and p1 intercepts the window at the two pairs in points
-    let v2 last  first points
-    let u3 first last  points        
-    let v3 last  last  points
-    connect u2 v2 u3 v3 c w ]
-end
-
-to connect [u0 v0 u1 v1 c wide] 
-  ; uses drawing-dots to connect u0,v0 to u1,v1 with a line of color c and width wide
+to connect [p0 p1 c wide]                   ; draws a line between p0 and p1
+  ; uses drawing-dots to connect p0 to p1 with a line of color c and width wide
+  ; p0 and p1 are in physical units. 
+  let u0 mx * (first p0) + bx
+  let u1 mx * (first p1) + bx
+  let v0 my * (last p0) + by
+  let v1 my * (last p1) + by
   if u0 = u1 and v0 = v1 [stop] ; don't bother with points on top of each other
-  let w 0 let w1 0
-  create-drawing-dots 1 [
-    let x0 (u0 - bxx) / mxx 
+  ; assumes that u0 is in the window and that u1>u0 is either in the window or off the right edge. 
+  let w 0                       ; the who of the left point
+  create-drawing-dots 1 [       ; create the left end of the line and show it as a tick mark
     set size .1 * magnification 
     set shape "tick mark" set color black
     set heading 0
-    ifelse (on-edge? u0 v0) or x0 < 0 [ht][st]   ; hide the tick mark if it is on the edge
-    setxy u0 v0
+    setxy u0 v0 
     set w who]
-  create-drawing-dots 1 [      ; make a label for the square dot a bit lower and to the right of the dot
-    let x0 (u0 - bxx) / mxx 
-    if x0 >= 0 [        ; label only non-negative values
+  create-drawing-dots 1 [      ; make a label for the left-hand square dot a bit lower and to the right of the dot
+    let x0 (u0 - bx) / mx 
+    if x0 >= 0 [        ; label only non-negative physical values--these are on the floor
       set size .1
       set color yellow + 4.5  ; the same as the background
       set label-color black
       set label word (precision x0 2 ) " m"
-      ifelse on-edge? u0 v0 [ht][st]   ; hide the black dot and its label if it is on the edge
-      setxy u0 + 12 v0 - 12 ]] 
-  create-drawing-dots 1 [
+      setxy u0 + 6 v0 - 6 ]] 
+  create-drawing-dots 1 [     ; make the right end of the line--not a dot
     ht 
+    if u1 > ur [set u1 ur]    ; if the right point is off the right edge, set it to the right edge
     setxy u1 v1
-    set w1 who
-    create-link-with drawing-dot w [
+    create-link-with drawing-dot w [    ; draw a line between the two points 
       set thickness wide
       set color c ]]
+end 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;  move the car  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to run-car
+  ; using the starting position, move car forward only if running? is true
+  if running? and not old-running? [   ; must be the first cycle 
+    set old-running? true       
+    set saved-starting-x car-x
+    set start-height (precision height 2) ]        ; save the starting height
+  
+  ; begin the integration
+  set time time + dt
+  ask cars [
+    let ch cos heading
+    let sh sin heading
+    let a 0
+    let f 0    
+    if car-x > 0 [ set f friction ] ;              ; ensure that the friction applies only on the floor
+    ifelse car-speed > 0 
+        [set a g * ( sh  - f * ch) ]               ; the acceleration to the right if the car is moving to the right
+        [set a g * ( sh  + f * ch) ]               ; the acceleration to the right if the car is moving left
+    let mid-speed car-speed + .5 * a * dt          ; estimate the speed mid-interval
+    set car-x car-x + mid-speed * ch * dt          ; use the mid-interval speed to get the final x-value
+    set car-speed mid-speed + .5 * a * dt          ; update the speed
+    
+    if car-x > 4.3 [ crash ]                       ; check whether the car reaches the right-hand edge. 
+  
+    ifelse abs (car-speed) > .005                 ; stop the run if it is at rest for more than countdown intervals
+      [set countdown loops-at-zero]
+      [set countdown countdown - 1 ]
+    if countdown < 1 [
+      handle-run-end ]
+    place-car car-x]
+end
+  
+to crash
+  set car-speed 0                              ; crash into the right-hand wall. 
+  clear-output
+  pretty-print "Oops, you crashed the car!!"
+  set shape "crash"                            ; we want to make this obvious because the p-space graph shows a break for runs that result in crashes
+  let old-size size                            ; save the size
+  set size 20 
+  repeat 12 [wait .15 set size size + 10]
+  wait .5
+  set car-x 4.2
+  set shape "car"
+  set size old-size                            ; restore the size
 end
 
-to-report on-edge? [u v]
-  report (u = ul) or (u = ur) or
-         (v = vb) or (v = vt)
-end  
-  
-to-report vehicle-info [pairs x]    ; returns y(x) and angle: the height and dirction of the vehicle
-  ;  on a ramp that is a plc defined by pairs, an ordered list of x,y lists (uses problem coordinates)
-  if x < first first pairs [report list 0 90]
-  if x > first last  pairs [report list 0 90] ; if x is less than the first x or greater than the last, return zero
+to handle-run-end            ; This is called once when the car has not moved for a while, indicating that the run is over. Called by run-cars
+  set final-position car-x
+  set running? false         ; this stops the calculations and unlocks the sliders
+  set ready-for-export? true ; require the next user action be analyzing the data
+  clear-output               ; erase previous instructions for the user
+  pretty-print "You can now analyze your data. Press the 'Analyze Data' button."
+end
+
+to capture-final-state
+  if not starting? and not running? [
+    set old-running? false
+    set ready-for-export? true
+    ; saves this experiment in an exportable form as a run
+    ask cars [
+      update-run-series (precision final-position 2) ]
+  ]
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;; put car on ramp ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to place-car [x]  ; in car context, puts the car on the track at x (in physical units)
+  let mult 1 if level = 4 [set mult 1.4]                 ; enlarge car in level 4
+  let off-mult 1 if level = 4 [set off-mult 1.2]         ; offset the more in level 4
+  set size car-size * .01 * mult * magnification
+  let old-offset car-offset
+  set car-offset off-mult * car-offset
+  set car-x x     ; update the variable car-x (needed in uv-of-car)
+  let loc uv-of-car       ; get the [u v] coordinates of the car and set its heading
+  let u first loc let v last loc
+  ifelse in-window? u v   ; if the car is in the window
+    [st setxy u v]        ; show it and place it
+    [ht]
+  set car-offset old-offset ; restore the offset
+end
+
+to-report uv-of-car ; in car context, reports the screen coordinates [u v] of the center of the car
+  ; also sets the heading of the car and its car-y
+  let disp car-offset * .01 * magnification        ; the displacement of the car center above the ramp
+  let u mx * car-x + bx
+  let info track-height ramp car-x     ; info contains the y and direction of the ramp at x
+  let y first info 
+  set car-y y
+  set height y
+  let v my * y + by
+  set heading (last info) - 90
+  set disp disp / cos heading
+  report list u (v + disp)
+end
+
+to-report track-height [pairs x]    ; returns y(x) and angle: the height of the ramp at the car and dirction of the car
+  ;  on a ramp that is defined by pairs, an ordered list of x,y lists (uses problem coordinates)
+  if x < first first pairs [report list 0 90] ; if x is less than the first x or greater than the last, return zero
+  if x > first last  pairs [report list 0 90]
   let i 1                             ; for the inteval between each pair defined by their x-values
-  while [i < length pairs ][
+  while [i < length pairs ][          ; find the two pairs that straddle x
     let x0 first item (i - 1) pairs 
     let x1 first item i pairs
     if x >= x0 and x <= x1 [ ; if x is not less than the previous x and not greater than the current one
@@ -753,92 +404,18 @@ to-report vehicle-info [pairs x]    ; returns y(x) and angle: the height and dir
     set i i + 1 ]
 end
 
-to-report track-height [pairs x]    ; returns y(x) : the height of the track defined by pairs at x
-  ; pairs is an ordered list of x,y lists (uses problem coordinates) "ramp" is the usual value
-  if x < first first pairs [report 0]
-  if x > first last  pairs [report 0] ; if x is less than the first x or greater than the last, return zero
-  let i 1                             ; for the inteval between each pair defined by their x-values
-  while [i < length pairs ][
-    let x0 first item (i - 1) pairs 
-    let x1 first item i pairs
-    if x >= x0 and x <= x1 [ ; if x is not less than the previous x and not greater than the current one
-      ; x must be between pair i-1 and i, so interpolate
-      let y0 last item (i - 1) pairs
-      let y1 last item i pairs
-      if x0 = x1 [ report .5 * (y0 + y1) ] ; If the points are at the same x-value, return the average of the ys
-      report  (y0 + (x - x0) * (y1 - y0) / (x1 - x0)) ]
-    set i i + 1 ]
-end
 
-to run-vehicles
-  ; using the starting position, move vehicle forward only if running? is true
-  if running? and not old-running? [   ; must be the first cycle 
-    set old-running? true       
-    set saved-starting-x dist-from-zero 
-    set start-height (precision height 2) ]        ; save the starting height
-  
-  ; begin the integration
-  set time time + dt
-  ask vehicles [
-    let ch cos heading
-    let sh sin heading
-    let a 0
-    let f 0    
-    if x-val > 0 [ set f friction ] ;* .4          ; ensure that the friction applies only on the floor
-    ifelse speed > 0 
-        [set a g * ( sh  - f * ch) ]               ; the acceleration to the right if the car is moving to the right
-        [set a g * ( sh  + f * ch) ]               ; the acceleration to the right if the car is moving left
-    let mid-speed speed + .5 * a * dt              ; estimate the speed mid-interval
-    set x-val x-val + mid-speed * ch * dt          ; use the mid-interval speed to get the final x-value
-    set speed mid-speed + .5 * a * dt              ; update the speed
-    
-    if x-val > 4.3 [                               ; check whether the car reaches the right-hand edge. 
-      set speed 0                                  ; crash into the right-hand wall. 
-      clear-output
-      pretty-print "Oops, you crashed the car!!"
-      set shape "crash"                            ; we want to make this obvious because the p-space graph shows a break for runs that result in crashes
-      let old-size size                            ; save the size
-      set size 20 
-      repeat 12 [wait .15 set size size + 10]
-      wait .5
-      set x-val 4.2
-      set shape "car"
-      set size old-size]                           ; restore the size
-  
-    ifelse abs (speed - 0 ) > .0001                ; stop the run if it is at rest for more than ten intervals
-      [set countdown loops-at-zero]
-      [set countdown countdown - 1 ]
-    if countdown < 1 [
-      set final-position x-val
-      handle-run-end ]
-    place-vehicle x-val]
-end
-
-to handle-run-end      ; This is called once when the vehicle has not moved for a while, indicating that the run is over. Called by run-vehicles
-  set running? false   ; this stops the calculations and unlocks the sliders
-  set ready-for-export? true   ; require the next user action be analyzing the data
-  clear-output         ; erase previous instructions
-  pretty-print "You can now analyze your data. Press the 'Analyze Data' button."
-end
-
-to capture-final-state
-  if not starting? and not running? [
-    set old-running? false
-    set ready-for-export? true
-    ; saves this experiment in an exportable form as a run
-    ask vehicle first v-who [
-      update-run-series (precision final-position 2) ]
-  ]
-end
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;  Game functions ;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
 to setup-new-run
   if not waiting-for-setup? [data-export:log-event "User tried to setup a new run before analyzing data." "" "" ""
     stop]
+  set waiting-for-setup? false
   set step next-step 
   set level next-level
   let endpoint 0
-  ask vehicle first v-who [ set endpoint (precision x-val 3) ]
   data-export:log-event "User set up a new run." (create-run-parameter-list endpoint) "" ""
   set waiting-for-setup? false
   set waiting-for-start? true
@@ -846,267 +423,40 @@ to setup-new-run
   setup-game           ; sets up the various controls for this new step and level.
   show-target          ; shows the new target
   set time 0
-  ask graph-dots [die]     ; erase-data  
-  set run-number run-number + 1 
-  ask vehicles [
+  ask cars [
     set color red     
     if level = 3 [set color green]
     if level = 4 [set color blue]]
-  switch-focus-to 2  ; reset the grid
-  set blinking? false
-  set grid-xmin 0 set grid-xmax 4 
-  set grid-ymin -2 set grid-ymax 5
-  rescale-grid
-  
-  switch-focus-to 1
-  set x-center 1.35
-  draw-ramp
   if level = 5 [set saved-starting-x -.5]
-  if not empty? v-who [
-    let i 0 
-    while [i < length v-who][
-      ask vehicle (item i v-who) [
-        place-vehicle saved-starting-x 
-        set speed 0]
-      set i i + 1]]
-  set running? false ; the simulation is not recording
-  set old-running? false  ; used to trap the first cycle (probably redundant)
+  
+  ask cars [
+    place-car saved-starting-x 
+    set car-speed 0]
+  set running? false             ; the simulation is not running
+  set old-running? false         ; used to trap the first cycle (probably redundant)
   data-export:clear-last-run
 ;  set waiting-for-setup? false  ; ignore this procedure if the next user action must be pressing the setup button
-  show-target      ; shows the target for this level and step
+  show-target                    ; shows the target for this level and step
   pretty-print instructions 
   tick
 end
 
 to show-target   ; draws the target for the current level and step. 
   ; Must set step and level first, as well as target value and target radius (in problem space, e.g., meters)
-  switch-focus-to 1    ; set focus on the ramp
+  ; marker-1 and marker-2 were made in the initialize procedure and are always connected by a red line
+  let y first track-height ramp target  ; track-height returns [y direction]
   ask marker marker-1 [
-    set x-val target - target-radius
-    set y-val track-height ramp x-val
-    let u mxx * x-val + bxx
-    let v myy * y-val + byy + 6
+    let u mx * (target - target-radius) + bx
+    let v my * y + by + 3
     setxy u v st ]
-;    ifelse in-grid? u v 
-;      [setxy u v st ] [ht]]
   ask marker marker-2 [
-    set x-val target + target-radius
-    set y-val  track-height ramp x-val
-    let u mxx * x-val + bxx
-    let v myy * y-val + byy + 6
+    let u mx * (target + target-radius) + bx
+    let v my * y + by + 3
     setxy u v st ]
-;    ifelse in-grid? u v 
-;      [setxy u v st ][ht]]
-  set waiting-for-setup? false
   ask marker marker-3 [         ; show a square indicator at the center of the target
-    set x-val target
-    set y-val track-height ramp x-val
-    let u mxx * x-val + bxx
-    let v myy * y-val + byy + 9
+    let u mx * target + bx
+    let v my * y + by + 4.5
     setxy u v st ]
-end
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;; scale and grid-drawing routines ;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-to draw-grid  ; draws the grid 
-  ; inputs (all globals) are the grid screen boundaries, the desired ranges of x and y, the intended number of tic marks in the x-direction, 
-  ; the axis labels, and the colors of the grid and labels
-  ; Draws and labels the graphing grid 
-  ; outputs are the transformation coefs which are stored in the second position in their respective lists
-  ask grid-dots [die] ; clear the grid
-  draw-verticals   ; draws the vertical lines and the x-axis
-  draw-horizontals ; draws the horizontal lines and the y-axis
-end
-
-to draw-verticals ; x-axis
-  let xTarget (grid-umax - grid-umin ) * patch-size / grid-separation       ;  sets the target number of tics based on the size of the graphing area
-                                                      ; allocates about grid-separation pixels per tic
-  let a ticMarks grid-xMin grid-xMax xTarget        ; a now contains graph-xmin, graph-xmax, and n-xtics 
-  set grid-xmin first a set grid-xmax item 1 a
-  ; compute the transformation coeficients in u=mx+b
-  set mxx (grid-umax - grid-umin) / (grid-xmax - grid-xmin)
-  set bxx grid-umin - mxx * grid-xmin
-  set mx replace-item 1 mx mxx  ; store these transformation coefs
-  set bx replace-item 1 bx bxx
-  let n-xtics last a
-  let dxx (grid-xmax - grid-xmin) / (n-xtics - 1)
-  let x grid-xmin
-  repeat n-xtics [   ; draw and label the verticals one at a time
-    let w 0 
-    let u mxx * x + bxx
-    create-grid-dots 1 [
-      set size 0 
-      setxy u grid-vmax  ; place at the top of the grid
-      set w who ]
-    create-grid-dots 1 [
-      set size 0 
-      setxy u grid-vmin - tic-length
-      create-link-with grid-dot w [
-        set thickness line-width
-        set color grid-color
-        if abs (x - grid-xmin ) < .01 * dxx or 
-            abs (x - grid-xmax ) < .01 * dxx [
-          set thickness 2 * line-width ]]]   ; make edges wider
-    create-grid-dots 1 [      ; used to place the value 
-      set size 0 
-      set label precision x 3
-      set label-color grid-label-color
-      setxy u + 5 grid-vmin - (tic-length + 5)]
-    set x x + dxx ]
-  create-grid-dots 1 [    ; label the axis
-    set size 0
-    let u .5 * (grid-umax + grid-umin) + 2 * length grid-xlabel
-    setxy u grid-vmin - 20
-    set label grid-xlabel 
-    set label-color grid-label-color]
-end
-      
-to draw-horizontals ; y-axis
-  let yTarget (grid-vmax - grid-vmin ) * patch-size / grid-separation       ;  sets the target number of tics based on the size of the graphing area
-                                                      ; allocates about grid-separation pixels per tic
-  let a ticMarks grid-yMin grid-yMax yTarget        ; a now contains graph-xmin, graph-xmax, x-interval, and n-xtics 
-  set grid-ymin first a 
-  set grid-ymax item 1 a
-  ; compute the transformation coeficients in u=mx+b
-  set myy (grid-vmax - grid-vmin) / (grid-ymax - grid-ymin)
-  set byy grid-vmin - myy * grid-ymin
-  set my replace-item 1 my myy  ; store these transformation coefs
-  set by replace-item 1 by byy
-  let n-ytics last a
-  let dyy (grid-ymax - grid-ymin) / (n-ytics - 1)
-  let y grid-ymin
-  repeat n-ytics [   ; draw and label the horizontals one at a time
-    let w 0 
-    let v myy * y + byy
-    create-grid-dots 1 [
-      set size 0 
-      setxy grid-umax v ; place at the right of the grid
-      set w who ]
-    create-grid-dots 1 [
-      set size 0 
-      setxy (grid-umin - tic-length) v
-      set label precision y 3
-      set label-color grid-label-color
-      create-link-with grid-dot w [
-        set thickness line-width
-        set color grid-color
-        if abs (y - grid-ymin ) < .01 * dyy or 
-            abs (y - grid-ymax ) < .01 * dyy [
-          set thickness 2 * line-width ]]]   ; make edges wider
-    set y y + dyy ]
-  create-grid-dots 1 [ ; label the y-axis
-    set size 0 
-    set label y-axis
-    set label-color grid-label-color
-    let u grid-umin + 5 * length y-axis
-    setxy u grid-vmax + 5]
-end 
-
-to-report ticMarks [zMin zMax targetNumber]
-     ; Computes the scaling parameters.
-     ; Inputs are:
-     ;     the beginning of the scale
-     ;     The end of the scale
-     ;     The target number of tic marks in the scale
-     ; returns a list:
-     ;    The first item is the beginning of the scale (rounded down to an even number)
-     ;    The second item is the end of the scale (rounded up)
-     ;    The third item is the actual number of tics (differnet from nTics)
-   if ( zMax < zMin ) [                       ; swap if in the wrong order
-     let z zMax
-     set zMax zMin
-     set zMin z ]
-      ; compute the target interval between scale divisions (tic marks) in problem coordinates.
-      ; note that if there are N tic marks, there are N-1 intervals.
-   let dz  (zMax - zMin) / (targetNumber - 1) ; the value of the interval for the target number of tics
-   let y log dz 10                            ; compute the log base 10 of dz
-   let a floor y                              ; round y down to the nearest smaller integer
-   let z y - a                                ; z is the fractional part of the log
-   let r 0
-   ifelse z < .15                             ; if z is less than .15 set r to 1
-     [set r 1]
-     [ifelse z < .5                           ; otherwise if it is less than .5 set r to 2
-        [set r  2]
-        [ifelse  z < .85                      ; otherwise if it is less that .85 set r to 5
-          [set r 5 ]                          ; and if all else fails, set r to 10
-          [set r 10 ]]]                       ; r is the nearest 'nice' number to z: 1, 2, 5 or 10                        
-   set dz  r * 10 ^ a                         ; dz is now the "corrected" tic interval
-   let k floor (zMin / dz)                  
-   let lowtic k * dz
-   let ntics 1 + ceiling (zMax / dz ) - k     ; the actual number of tic marks
-   let hitic lowtic + dz * (ntics - 1)  
-   report (list lowtic hitic ntics)
-end
-
-to place-point [x y c]   ; places the point x,y on the grid in window 2 as a dot of color c
-  switch-focus-to 2
-  let f .05 ; a fraction of the grid scale 
-  if x > (1 - f) * grid-xmax - f * grid-xmin [ ; if near the right edge...
-    set grid-xmax 1.5 * grid-xmax  ; the x-axis always starts at zero time
-    rescale-grid ]
-  if y < grid-ymin + f * (grid-ymax - grid-ymin) [ ; if near the bottom...
-    set grid-ymin grid-ymin - .5 * (grid-ymax - grid-ymin)
-    rescale-grid]
-  if y > (1 - f) * grid-ymax - f * grid-ymin [     ; if near the top
-    set grid-ymax grid-ymax + .5 * (grid-ymax - grid-ymin)
-    rescale-grid]
-  let u mxx * x + bxx
-  let v myy * y + byy
-  create-graph-dots 1 [ht
-    set x-val x set y-val y 
-    set color c
-    set size 5 set shape "dot"
-    if in-grid? u v [ st
-      setxy u v ]]
-end
-    
-to update-y-axis
-end
-
-to rescale-grid    ; redraws the grid and any points using the globals grid-xmin, grid-ymin,  etc....
-  switch-focus-to 2
-  draw-grid
-  ask graph-dots [
-    let u mxx * x-val + bxx
-    let v myy * y-val + byy
-    ifelse in-grid? u v 
-      [st setxy u v ]
-      [ht]]    
-end
-
-to hide-graph
-  ask graph-dots [ht]
-  ask grid-dots [die]
-end
-
-to add-vehicle
-  create-vehicles 1 [
-;    switch-focus-to 1
-    ht  
-    set v-who lput who v-who ; add this to the list of vehicle whos
-    let n ((length v-who) - 1) mod 6
-    set color red
-    set shape item n vehicle-shapes
-    ifelse level = 4 [set mass 200] [set mass 100]
-    set x-val item n vehicle-starts  ; beginning location of vehicle
-    set offset item n vehicle-offsets
-    set size-100 item n vehicle-sizes
-    set spring-left? false
-    set spring-right? false
-    place-vehicle x-val]
-end
-
-to remove-vehicle ; removes the selected vehicle
-  if not blinking? [stop]   ; some vehicle is selected only if blinking? is true
-  if length v-who < 2 [stop] 
-  ask vehicle selected-vehicle [die]
-  ; now correct v-who list by removing the selected vehicle's who.
-  let i position selected-vehicle v-who
-  set v-who remove-item i v-who
-  set blinking? false
-  set selected-vehicle first v-who
 end
 
 to start-run
@@ -1116,7 +466,7 @@ to start-run
   if not waiting-for-start? [stop]
   if running? [data-export:log-event "User tried to start while running." "" "" ""
     stop]            ; ignore if running
-  if ([x-val] of vehicle first v-who) >= 0 [
+  if car-x >= 0 [
     pretty-print "Place the car on the ramp." 
     data-export:log-event "User tried to start with car on the level floor." "" "" ""
     stop ] ; if the car is not on the ramp, stop
@@ -1125,46 +475,12 @@ to start-run
   set data-saved? false
   set waiting-for-start? false
   set ready-for-export? false
-  ask graph-dots [die]   ; erase data
+  set car-speed 0
   let endpoint 0
-  ask vehicle first v-who [ set endpoint (precision x-val 2) ]
+  set endpoint precision car-x 2
   data-export:log-event (word "User started the model with the following level and step: " level " " step ".") (create-run-parameter-list endpoint) "" ""
   set running? true
-  set blinking? false
   set time 0
-end
-
-to read-cursor-location  ; used if the cursor is in the graphing area
-  let u mouse-xcor let v mouse-ycor
-  if not in-grid? u v [
-    ask readers [ht]
-    stop]
-  switch-focus-to 2
-  let x precision ((u - bxx) / mxx) 2
-  let y precision ((v - byy) / myy) 2
-  ask readers [ st
-    set label (word "time: " x " distance: " y)
-    setxy u v]
-end
-
-to autoscale
-  ; assume that x-val, y-val in the graph dots contain the points to be plotted
-  ; find the min and max of each
-  if count graph-dots = 0 [stop]    ; this could cause errors
-  set grid-xmin 1e20  set grid-xmax -1e20 
-  set grid-ymin 1e20  set grid-ymax -1e20
-  ask graph-dots [
-    if x-val < grid-xmin  [set grid-xmin x-val ]
-    if x-val > grid-xmax  [set grid-xmax x-val ]
-    if y-val < grid-ymin  [set grid-ymin y-val ]
-    if y-val > grid-ymax  [set grid-ymax y-val]]
-  ; grid-xmin grid-xmax grid-ymin and grid-ymax now contain the min-max for the two axes
-  ; now rescale the grid using the new limits. Calculate the transforms mxx, etc. 
-  switch-focus-to 2
-  draw-grid
-  ; and finally, move the dots to their new positions
-  ask graph-dots [
-    setxy (mxx * x-val + bxx) (myy * y-val + byy)]
 end
 
 to get-next-step    ; determines whether the student stays at this step, goes up, or goes down and displays the score
@@ -1229,10 +545,8 @@ to setup-game-level ; setup the game for the current level.
     set friction .18
     set old-friction friction
     set friction-locked? true
-    set air-friction-locked? true
     set starting-position-locked? false
-    set ramp-locked? true
-    set vehicle-locked? false
+    set car-locked? false
     set starting-position-max -1
     set starting-position-min -1
     set n-steps  3   
@@ -1248,13 +562,10 @@ to setup-game-level ; setup the game for the current level.
       set instructions word instructions " Watch out!! The red band now moves each trial."]
     set friction .18
     set old-friction friction
-;    set air-friction .2
     set friction-locked? true
-    set air-friction-locked? true
     set starting-position-locked? false
-    set ramp-locked? true
     set n-steps  4
-    set vehicle-locked? false
+    set car-locked? false
     set starting-position-max -1
     set starting-position-min -1
     set target-radius-max .5 ; the distance between the center and edge of the target for step 1
@@ -1266,13 +577,10 @@ to setup-game-level ; setup the game for the current level.
     set instructions ""
     if step = 1 [set instructions "Challenge 3: Make a new car stop in the red area. This car has less friction."]
     set friction .08
-    set mass 100
+    set car-mass 100
     set old-friction friction
     set starting-position-locked? false    
-    set friction-locked? true
-    set air-friction-locked? false
-    set ramp-locked? true
-    set vehicle-locked? false
+    set car-locked? false
     set n-steps  4
     set starting-position-max -1
     set starting-position-min -1
@@ -1286,13 +594,11 @@ to setup-game-level ; setup the game for the current level.
     if step = 1 [set instructions "Challenge 4: Make this heavier car stop in the center of the red area. This car is twice the mass of the last car."]
 ;    set instructions word instructions "\nYou will find it helpful to change the x-axis of the graph to ramp-height."
     set friction .18
-    set mass 200
+    set car-mass 200
     set old-friction friction
     set starting-position-locked? false    
     set friction-locked? true
-    set air-friction-locked? true
-    set ramp-locked? true
-    set vehicle-locked? false
+    set car-locked? false
     set n-steps  3
     set starting-position-max -.8
     set starting-position-min -.8
@@ -1305,14 +611,12 @@ to setup-game-level ; setup the game for the current level.
     set instructions ""
     if step = 1 [set instructions "Challenge 5: Now make the car stop in the center of the red area by changing the friction. "]
     set friction .18
-    set mass 100
+    set car-mass 100
     set old-friction friction
 ;    set air-friction .2
     set starting-position-locked? true    
     set friction-locked? false
-    set air-friction-locked? true
-    set ramp-locked? true
-    set vehicle-locked? true
+    set car-locked? true
     set n-steps 6
     set starting-position-max -.52
     set starting-position-min -.52
@@ -1358,7 +662,7 @@ end
 
 to update-score  ; called once by analyze-data
   ; computes the score for the most recent run and tests for random trials. 
-  ; input is final-position, generated by run-vehicles
+  ; input is final-position, generated by run-cars
   ; output is score-last-run
   set score-last-run 0
   if abs (final-position - target) < target-radius [
@@ -1542,7 +846,7 @@ to setup-data-export
     [ "End distance" "m" 0 6 true ]]
   let student-inputs [ ]           ; other student actions during analysis
   let model-information [          ; 
-    [ "ramp" "RampGame.v5f.nlogo" "Jan-16-2014" ] ]
+    [ "ramp" "RampGame.v5b.nlogo" "Jan-7-2014" ] ]
   let time-series-data [
 ;    [ "Time" "s" 0 0.1 ]           ; Check
 ;    [ "Distance" "m" 0 0.6 ]
@@ -1561,7 +865,7 @@ end
 ;;;
 
 to update-run-series [endpoint]    
-  let computational-inputs     (list level step start-height friction mass) 
+  let computational-inputs     (list level step start-height friction car-mass) 
   let representational-inputs []
   let computational-outputs   ( list endpoint )
   let student-inputs          []
@@ -1571,7 +875,7 @@ to update-run-series [endpoint]
 end
 
 to-report create-run-parameter-list [endpoint]
-  report (list start-height friction endpoint mass)
+  report (list start-height friction endpoint car-mass)
 end
 
 ;;;
@@ -1615,13 +919,13 @@ end
 ;;;
 @#$#@#$#@
 GRAPHICS-WINDOW
-12
-13
-647
-461
-300
-200
-1.0414
+10
+28
+643
+475
+150
+100
+2.07
 1
 10
 1
@@ -1631,10 +935,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--300
-300
--200
-200
+-150
+150
+-100
+100
 0
 0
 0
@@ -1645,8 +949,8 @@ BUTTON
 10
 10
 112
-44
-On/Off
+54
+Go
 Go
 T
 1
@@ -1659,10 +963,10 @@ NIL
 1
 
 BUTTON
-115
-243
-212
-277
+114
+253
+211
+287
 Setup New Run
 setup-new-run
 NIL
@@ -1676,10 +980,10 @@ NIL
 1
 
 BUTTON
-17
-209
-212
-243
+16
+219
+211
+253
 Start
 Start-run
 NIL
@@ -1693,10 +997,10 @@ NIL
 1
 
 SLIDER
-16
-288
-212
-321
+15
+298
+211
+331
 Friction
 Friction
 0
@@ -1708,19 +1012,19 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-22
-324
-211
-352
+21
+334
+210
+362
 This slider sets the friction of the car on the floor.
 10
 0.0
 1
 
 MONITOR
-146
+111
 10
-262
+227
 55
 Height above Floor
 word precision Height 2 \" m\"
@@ -1729,45 +1033,21 @@ word precision Height 2 \" m\"
 11
 
 MONITOR
-261
+226
 10
-386
+351
 55
 Distance to the right
-word precision Dist-from-zero 2 \" m\"
+word precision car-x 2 \" m\"
 17
 1
 11
 
-BUTTON
-541
-395
-626
-429
-NIL
-Autoscale
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-OUTPUT
-215
-209
-636
-454
-13
-
 MONITOR
-19
-358
-104
-407
+18
+375
+103
+424
 Total Score
 Total-Score
 17
@@ -1775,10 +1055,10 @@ Total-Score
 12
 
 MONITOR
-103
-358
-212
-407
+102
+375
+211
+424
 Score last run
 score-display
 17
@@ -1786,10 +1066,10 @@ score-display
 12
 
 MONITOR
-19
-406
-103
-455
+18
+423
+102
+472
 Challenge
 (word Level \" of \" max-level)
 17
@@ -1797,10 +1077,10 @@ Challenge
 12
 
 MONITOR
-103
-406
-212
-455
+102
+423
+211
+472
 Step
 (word Step \" of \" n-steps)
 17
@@ -1808,10 +1088,10 @@ Step
 12
 
 BUTTON
-17
-243
-114
-277
+16
+253
+113
+287
 Analyze data
 analyze-data
 NIL
@@ -1825,26 +1105,50 @@ NIL
 1
 
 MONITOR
-385
+349
 10
-455
+446
 55
 Car Mass
-word mass \" g\"
+word car-mass \" g\"
 17
 1
 11
 
 MONITOR
-455
+445
 10
-515
+551
 55
 Friction
 Friction
 17
 1
 11
+
+BUTTON
+549
+10
+643
+55
+Help
+display-help-message
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+OUTPUT
+212
+219
+636
+471
+13
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -2189,7 +1493,7 @@ Circle -7500403 true true 120 120 60
 tick mark
 true
 0
-Rectangle -7500403 true true 135 150 165 300
+Rectangle -7500403 true true 135 90 165 240
 
 tiny dot
 true
