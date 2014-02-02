@@ -498,7 +498,7 @@ to get-next-step    ; determines whether the student stays at this step, goes up
        if level < max-level [           ; if this isn't the last level
          clear-output           ; overwrite the 'advance step' message
          pretty-print (word "Congratulations! You earned " score-last-run " points! You advance to a new challenge!!")
-         pretty-print "Before going on, please open you lab notebook and record what you learned in this challenge."
+         pretty-print "Before going on, please open your lab notebook and record what you learned in this challenge."
          set freeze? true       ; freeze the game for a bit to force the user to use notebook
          set next-step 1 set next-level level + 1
          stop]
